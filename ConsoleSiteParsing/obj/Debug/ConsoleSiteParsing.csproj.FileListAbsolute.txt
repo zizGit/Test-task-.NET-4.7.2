@@ -1,0 +1,7 @@
+C:\Users\box11\source\repos\Test task .NET 4.7.2\ConsoleSiteParsing\bin\Debug\ConsoleSiteParsing.exe.config
+C:\Users\box11\source\repos\Test task .NET 4.7.2\ConsoleSiteParsing\bin\Debug\ConsoleSiteParsing.exe
+C:\Users\box11\source\repos\Test task .NET 4.7.2\ConsoleSiteParsing\bin\Debug\ConsoleSiteParsing.pdb
+C:\Users\box11\source\repos\Test task .NET 4.7.2\ConsoleSiteParsing\obj\Debug\ConsoleSiteParsing.csproj.AssemblyReference.cache
+C:\Users\box11\source\repos\Test task .NET 4.7.2\ConsoleSiteParsing\obj\Debug\ConsoleSiteParsing.csproj.CoreCompileInputs.cache
+C:\Users\box11\source\repos\Test task .NET 4.7.2\ConsoleSiteParsing\obj\Debug\ConsoleSiteParsing.exe
+C:\Users\box11\source\repos\Test task .NET 4.7.2\ConsoleSiteParsing\obj\Debug\ConsoleSiteParsing.pdb
