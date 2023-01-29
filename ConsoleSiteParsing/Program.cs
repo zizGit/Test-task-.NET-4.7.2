@@ -8,11 +8,13 @@ using System.Net.NetworkInformation;
 
 namespace ConsoleSiteParsing
 {
-    class Storage 
+    class Storage
     {
-        string userAddress, hostAddress, sitemapAddres;
+        private static string userAddress, hostAddress, sitemapAddress;
+        private List<string> addressesFromCode = new List<string>();
+        private List<string> addressesFromSitemap = new List<string>();
 
-        void SetAddress(string address) 
+        public void SetAddress(string address) 
         {
             if(address.StartsWith("http") && address.Last().ToString() == "/") 
             {
@@ -20,12 +22,35 @@ namespace ConsoleSiteParsing
             }
             else if (address.StartsWith("http") && address.Last().ToString() == "xml")
             {
-                sitemapAddres = address;
+                sitemapAddress = address;
             }
             else 
             {
                 hostAddress = address;
             }
+        }
+
+        public void SetNewAddressToList(string newAddress) 
+        {
+            addressesFromCode.Add(newAddress);
+        }
+
+        public string GetAddressUser() 
+        {
+            return userAddress;
+        }
+        public string GetAddressHost()
+        {
+            return hostAddress;
+        }
+        public string GetAddressSitemap()
+        {
+            return sitemapAddress;
+        }
+
+        public string GetAddressFromList(int index) 
+        {
+            return addressesFromCode.ElementAt(index);
         }
     }
 
@@ -33,29 +58,28 @@ namespace ConsoleSiteParsing
     {
         static void Main()
         {
-            string userAddress, hostAddress, sitemapAddres;
+            Storage storage = new Storage();
+            Input(storage);
 
-            Input(out userAddress, out hostAddress, out sitemapAddres);
-
-            Parsing(userAddress);
+            Parsing(storage.GetAddressUser());
         }
 
-        static void Input(out string userAddress, out string hostAddress, out string sitemapAddres)
+        static void Input(Storage storage)
         {
+            string tempAddress;
             bool inputCheck = false;
-            sitemapAddres = " ";
-            hostAddress = " ";
-
+            
             do
             {
                 Console.WriteLine("Example URL: https://ukad-group.com/");
                 Console.Write("Input URL: ");
-                userAddress = Console.ReadLine();
+                tempAddress = Console.ReadLine();
 
-                if (userAddress.StartsWith("http://") || userAddress.StartsWith("https://"))
+                if (tempAddress.StartsWith("http://") || tempAddress.StartsWith("https://"))
                 {
-                    hostAddress = urlToHost(userAddress);
-                    inputCheck = Ping(hostAddress);
+                    storage.SetAddress(tempAddress);
+                    UrlToHost(storage);
+                    inputCheck = Ping(storage.GetAddressHost());
 
                     if (!inputCheck)
                     {
@@ -79,9 +103,9 @@ namespace ConsoleSiteParsing
         static void Parsing(string address)
         {
             WebClient wc = new WebClient();
-            string content = wc.DownloadString(address);
+            string siteCode = wc.DownloadString(address);
 
-            Output(content);
+            Output(siteCode);
         }
 
         static bool Ping(string hostAddress)
@@ -97,33 +121,36 @@ namespace ConsoleSiteParsing
             return false;
         }
 
-        static string urlToHost(string address)
+        static void UrlToHost(Storage storage)
         {
-            string hostAddress;
+            string tempUserAddress, tempHostAddress;
 
-            if (address.StartsWith("http://"))
+            tempUserAddress = storage.GetAddressUser();
+
+            if (tempUserAddress.StartsWith("http://"))
             {
-                hostAddress = address.Replace("http://", "www.");
+                tempHostAddress = tempUserAddress.Replace("http://", "www.");
             }
             else
             {
-                hostAddress = address.Replace("https://", "www.");
+                tempHostAddress = tempUserAddress.Replace("https://", "www.");
             }
 
             while (true) 
             {
-                if (hostAddress.Last().ToString() == "/")
+                if (tempHostAddress.Last().ToString() == "/")
                 {
-                    hostAddress = hostAddress.Remove(hostAddress.Length - 1);
+                    tempHostAddress = tempHostAddress.Remove(tempHostAddress.Length - 1);
                 }
                 else
                 {
-                    return hostAddress;
+                    storage.SetAddress(tempHostAddress);
+                    break;
                 }
             }
         }
 
-        static void sitemapCheck() 
+        static void SitemapCheck() 
         {
 
         }
