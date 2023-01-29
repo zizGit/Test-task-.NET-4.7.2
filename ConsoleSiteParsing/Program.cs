@@ -16,13 +16,13 @@ namespace ConsoleSiteParsing
 
         public void SetAddress(string address) 
         {
-            if(address.StartsWith("http") && address.Last().ToString() == "/") 
-            {
-                userAddress = address;
-            }
-            else if (address.StartsWith("http") && address.Last().ToString() == "xml")
+            if(address.StartsWith("http") && address.Last().Equals("xml")) 
             {
                 sitemapAddress = address;
+            }
+            else if (address.StartsWith("http"))
+            {
+                userAddress = address;
             }
             else 
             {
@@ -59,19 +59,22 @@ namespace ConsoleSiteParsing
         static void Main()
         {
             Storage storage = new Storage();
-            Input(storage);
 
-            Parsing(storage.GetAddressUser());
+            Input(storage);
+            SitemapCheck(storage);
+
+            Console.ReadKey();
+            //Parsing(storage.GetAddressUser());
         }
 
         static void Input(Storage storage)
         {
-            string tempAddress;
+            string tempAddress; //user input address
             bool inputCheck = false;
             
             do
             {
-                Console.WriteLine("Example URL: https://ukad-group.com/");
+                Console.WriteLine("Example URL: https://ukad-group.com/"); //for debug
                 Console.Write("Input URL: ");
                 tempAddress = Console.ReadLine();
 
@@ -104,8 +107,12 @@ namespace ConsoleSiteParsing
         {
             WebClient wc = new WebClient();
             string siteCode = wc.DownloadString(address);
+        }
 
-            Output(siteCode);
+        static void Parsing(string address, out string toSave)
+        {
+            WebClient wc = new WebClient();
+            toSave = wc.DownloadString(address);
         }
 
         static bool Ping(string hostAddress)
@@ -121,6 +128,7 @@ namespace ConsoleSiteParsing
             return false;
         }
 
+        //https://ukad-group.com/ --> www.ukad-group.com
         static void UrlToHost(Storage storage)
         {
             string tempUserAddress, tempHostAddress;
@@ -138,7 +146,7 @@ namespace ConsoleSiteParsing
 
             while (true) 
             {
-                if (tempHostAddress.Last().ToString() == "/")
+                if (tempHostAddress.Last().ToString().Equals("/"))
                 {
                     tempHostAddress = tempHostAddress.Remove(tempHostAddress.Length - 1);
                 }
@@ -150,9 +158,36 @@ namespace ConsoleSiteParsing
             }
         }
 
-        static void SitemapCheck() 
+        //https://ukad-group.com/ --> https://ukad-group.com/sitemap.xml
+        //get urls from sitemap
+        static void SitemapCheck(Storage storage) 
         {
+            string tempUserAddress, sitemap;
 
+            tempUserAddress = storage.GetAddressUser();
+
+            if (tempUserAddress.Last().Equals("/")) 
+            {
+                storage.SetAddress(tempUserAddress.Insert(tempUserAddress.Length, "sitemap.xml"));
+            }
+
+            Console.Write("\nSitemap.xml - ");
+            if (Ping(storage.GetAddressHost())) 
+            {
+                Console.WriteLine("online");
+                Parsing(storage.GetAddressSitemap(), out sitemap);
+
+                if (sitemap.Contains("<a href =")) 
+                {
+                    Console.WriteLine("<a href = - founded");
+                }
+
+                
+            }
+            else
+            {
+                Console.WriteLine("not found");
+            }
         }
     }
 }
