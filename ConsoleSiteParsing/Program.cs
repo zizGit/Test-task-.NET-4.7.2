@@ -8,24 +8,43 @@ using System.Net.NetworkInformation;
 
 namespace ConsoleSiteParsing
 {
+    class Storage 
+    {
+        string userAddress, hostAddress, sitemapAddres;
+
+        void SetAddress(string address) 
+        {
+            if(address.StartsWith("http") && address.Last().ToString() == "/") 
+            {
+                userAddress = address;
+            }
+            else if (address.StartsWith("http") && address.Last().ToString() == "xml")
+            {
+                sitemapAddres = address;
+            }
+            else 
+            {
+                hostAddress = address;
+            }
+        }
+    }
+
     class Program
     {
         static void Main()
         {
-            string address;
+            string userAddress, hostAddress, sitemapAddres;
 
-            address = Input();
+            Input(out userAddress, out hostAddress, out sitemapAddres);
 
-            WebClient wc = new WebClient();
-            string content = wc.DownloadString(address);
-
-            Output(content);
+            Parsing(userAddress);
         }
 
-        static string Input()
+        static void Input(out string userAddress, out string hostAddress, out string sitemapAddres)
         {
-            string userAddress, hostAddress;
             bool inputCheck = false;
+            sitemapAddres = " ";
+            hostAddress = " ";
 
             do
             {
@@ -35,10 +54,7 @@ namespace ConsoleSiteParsing
 
                 if (userAddress.StartsWith("http://") || userAddress.StartsWith("https://"))
                 {
-                    //hostAddress = "www.ukad-group.com";
-
                     hostAddress = urlToHost(userAddress);
-
                     inputCheck = Ping(hostAddress);
 
                     if (!inputCheck)
@@ -52,8 +68,6 @@ namespace ConsoleSiteParsing
                 }
 
             } while (!inputCheck);
-
-            return userAddress;
         }
 
         static void Output(string content)
@@ -62,9 +76,12 @@ namespace ConsoleSiteParsing
             Console.ReadKey();
         }
 
-        static void Parsing()
+        static void Parsing(string address)
         {
+            WebClient wc = new WebClient();
+            string content = wc.DownloadString(address);
 
+            Output(content);
         }
 
         static bool Ping(string hostAddress)
@@ -104,6 +121,11 @@ namespace ConsoleSiteParsing
                     return hostAddress;
                 }
             }
+        }
+
+        static void sitemapCheck() 
+        {
+
         }
     }
 }
