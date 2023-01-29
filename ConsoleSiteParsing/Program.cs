@@ -93,9 +93,17 @@ namespace ConsoleSiteParsing
                 hostAddress = address.Replace("https://", "www.");
             }
 
-            hostAddress = hostAddress.Remove(hostAddress.Length - 1);
-
-            return hostAddress;
+            while (true) 
+            {
+                if (hostAddress.Last().ToString() == "/")
+                {
+                    hostAddress = hostAddress.Remove(hostAddress.Length - 1);
+                }
+                else
+                {
+                    return hostAddress;
+                }
+            }
         }
     }
 }
