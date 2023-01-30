@@ -85,7 +85,6 @@ namespace ConsoleSiteParsing
                 userAddress = userAddress.Insert(userAddress.Length, "/");
             }
         }
-
         private bool CheckAddressFromCode(string newCodeAddress)
         {
             if (!addressesFromCode.Contains(newCodeAddress))
@@ -128,15 +127,11 @@ namespace ConsoleSiteParsing
                     storage.SetAddress(tempAddress);
                     UrlToHost(storage);
                     inputCheck = Ping(storage.GetAddressHost());
-
-                    if (!inputCheck)
-                    {
-                        Console.WriteLine("Site not responce.");
-                    }
                 }
                 else
                 {
-                    Console.WriteLine("Input error! Please try again.");
+                    Console.Clear();
+                    Console.WriteLine("Input error! Please try again.\n");
                 }
 
             } while (!inputCheck);
@@ -144,6 +139,8 @@ namespace ConsoleSiteParsing
 
         static void Output(Storage storage)
         {
+            Console.Clear();
+
             Console.Write($"User input the next link - {storage.GetAddressUser()}\n");
             Console.Write($"Host link - {storage.GetAddressHost()}\n");
             Console.Write($"Sitemap link - {storage.GetAddressSitemap()}\n");
@@ -152,17 +149,19 @@ namespace ConsoleSiteParsing
             Console.Write($"Count of links founded in site code - {storage.GetCountOfCodeAddresses()}\n");
             Console.WriteLine();
 
+            Console.WriteLine("Links from sitemap.xml: ");
             int counter = 0;
             do
             {
-                Console.WriteLine($"Links from sitemap.xml - {storage.GetAddressFromSitemapList(counter)}");
+                Console.WriteLine($"{counter + 1}. {storage.GetAddressFromSitemapList(counter)}");
                 counter++;
             } while (storage.GetCountOfSitemapAddresses() != counter);
 
+            Console.WriteLine("Links from site: ");
             counter = 0;
             do
             {
-                Console.WriteLine($"Links from site - {storage.GetAddressFromCodeList(counter)}");
+                Console.WriteLine($"{counter + 1}. {storage.GetAddressFromCodeList(counter)}");
                 counter++;
             } while (storage.GetCountOfCodeAddresses() != counter);
 
@@ -178,11 +177,24 @@ namespace ConsoleSiteParsing
         static bool Ping(string hostAddress)
         {
             Ping pingSend = new Ping();
-            PingReply reply = pingSend.Send(hostAddress);
 
-            if (reply.Status.ToString() == "Success")
+            try
             {
-                return true;
+                PingReply reply = pingSend.Send(hostAddress);
+
+                if (reply.Status.ToString() == "Success")
+                {
+                    return true;
+                }
+                else 
+                {
+                    Console.WriteLine("Site not responce.");
+                }
+            }
+            catch (PingException exception)
+            {
+                Console.Clear();
+                Console.WriteLine($"Exception - {exception.InnerException.Message}\n");
             }
 
             return false;
