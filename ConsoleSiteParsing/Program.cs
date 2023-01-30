@@ -74,14 +74,15 @@ namespace ConsoleSiteParsing
         {
             return addressesFromSitemap.ElementAt(index);
         }
-
-        public int GetCountOfSitemapAddresses()
-        {
-            return countOfSitemapAddresses;
-        }
         public int GetCountOfCodeAddresses()
         {
-            return countOfCodeAddresses;
+            return addressesFromCode.Count();
+            //return countOfCodeAddresses;
+        }
+        public int GetCountOfSitemapAddresses()
+        {
+            return addressesFromSitemap.Count();
+            //return countOfSitemapAddresses;
         }
         // getters //
 
@@ -103,10 +104,11 @@ namespace ConsoleSiteParsing
             Storage storage = new Storage();
 
             Input(storage);
-            SitemapCheck(storage);
 
-            Console.ReadKey();
-            //Parsing(storage.GetAddressUser());
+            SitemapCheck(storage);
+            SourceCodeCheck(storage);
+
+            Output(storage);
         }
 
         static void Input(Storage storage)
@@ -139,16 +141,31 @@ namespace ConsoleSiteParsing
             } while (!inputCheck);
         }
 
-        static void Output(string content)
+        static void Output(Storage storage)
         {
-            Console.WriteLine(content);
-            Console.ReadKey();
-        }
+            Console.Write($"User input the next link - {storage.GetAddressUser()}\n");
+            Console.Write($"Host link - {storage.GetAddressHost()}\n");
+            Console.Write($"Sitemap link - {storage.GetAddressSitemap()}\n");
+            Console.WriteLine();
+            Console.Write($"Count of links founded in sitemap.xml - {storage.GetCountOfSitemapAddresses()}\n");
+            Console.Write($"Count of links founded in site code - {storage.GetCountOfCodeAddresses()}\n");
+            Console.WriteLine();
 
-        static void Parsing(string address)
-        {
-            WebClient wc = new WebClient();
-            string siteCode = wc.DownloadString(address);
+            int counter = 0;
+            do
+            {
+                Console.WriteLine($"Links from sitemap.xml - {storage.GetAddressFromSitemapList(counter)}");
+                counter++;
+            } while (storage.GetCountOfSitemapAddresses() != counter);
+
+            counter = 0;
+            do
+            {
+                Console.WriteLine($"Links from site - {storage.GetAddressFromCodeList(counter)}");
+                counter++;
+            } while (storage.GetCountOfCodeAddresses() != counter);
+
+            Console.ReadKey();
         }
 
         static void Parsing(string address, out string toSave)
@@ -213,37 +230,71 @@ namespace ConsoleSiteParsing
             Console.Write("\nSitemap.xml - ");
             if (Ping(storage.GetAddressHost()))
             {
-                Console.WriteLine("online");
+                Console.WriteLine("online\n");
                 
                 Parsing(storage.GetAddressSitemap(), out sitemap);
 
                 //начиная с исходной ссылки и заканчивая знаком <
 
-                int firstCharIndexOfSourceAddress, lastCharIndexOfSourceAddress;
+                int firstCharIndexOfAddress, lastCharIndexOfAddress;
                 int startSearchIndex = 0, linksCounter = 0;
 
                 do
                 {
-                    firstCharIndexOfSourceAddress = sitemap.IndexOf(storage.GetAddressUser(), startSearchIndex);
+                    firstCharIndexOfAddress = sitemap.IndexOf(storage.GetAddressUser(), startSearchIndex);
 
-                    if (firstCharIndexOfSourceAddress != -1)
+                    if (firstCharIndexOfAddress != -1)
                     {
-                        lastCharIndexOfSourceAddress = sitemap.IndexOf("<", firstCharIndexOfSourceAddress);
+                        lastCharIndexOfAddress = sitemap.IndexOf("<", firstCharIndexOfAddress);
 
-                        storage.SetNewAddressToSitemapList(sitemap.Substring(firstCharIndexOfSourceAddress,
-                            lastCharIndexOfSourceAddress - firstCharIndexOfSourceAddress));
+                        if (lastCharIndexOfAddress != -1)
+                        {
+                            storage.SetNewAddressToSitemapList(sitemap.Substring(firstCharIndexOfAddress,
+                            lastCharIndexOfAddress - firstCharIndexOfAddress));
 
-                        linksCounter++;
-                        startSearchIndex = lastCharIndexOfSourceAddress;
+                            linksCounter++;
+                            startSearchIndex = lastCharIndexOfAddress;
+                        }
                     }
-                } while (firstCharIndexOfSourceAddress != -1);
+                } while (firstCharIndexOfAddress != -1);
 
                 storage.SetCountOfSitemapAddresses(linksCounter);
             }
             else
             {
-                Console.WriteLine("not found");
+                Console.WriteLine("not found\n");
             }
+        }
+
+        static void SourceCodeCheck(Storage storage)
+        {
+            string siteCode;
+            string whatIShouldSearch = "<a href=\"/"; //<a href="*link*"
+            int firstCharIndexOfAddress, lastCharIndexOfAddress = 0;
+            int startSearchIndex = 0, linksCounter = 0;
+
+            Parsing(storage.GetAddressUser(), out siteCode);
+            
+            do
+            {
+                firstCharIndexOfAddress = siteCode.IndexOf(whatIShouldSearch, startSearchIndex);
+                
+                if (firstCharIndexOfAddress != -1)
+                {
+                    lastCharIndexOfAddress = siteCode.IndexOf("/\" ", firstCharIndexOfAddress);
+
+                    if (lastCharIndexOfAddress != -1)
+                    {
+                        storage.SetNewAddressToCodeList(siteCode.Substring(firstCharIndexOfAddress,
+                        lastCharIndexOfAddress - firstCharIndexOfAddress));
+
+                        linksCounter++;
+                        startSearchIndex = lastCharIndexOfAddress;
+                    }
+                }
+            } while (lastCharIndexOfAddress != -1);
+
+            storage.SetCountOfCodeAddresses(linksCounter);
         }
     }
 }
