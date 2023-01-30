@@ -11,7 +11,6 @@ namespace ConsoleSiteParsing
     class Storage
     {
         private static string userAddress, hostAddress, sitemapAddress;
-        private static int countOfSitemapAddresses, countOfCodeAddresses;
         private static List<string> addressesFromCode = new List<string>();
         private static List<string> addressesFromSitemap = new List<string>();
 
@@ -35,20 +34,14 @@ namespace ConsoleSiteParsing
 
         public void SetNewAddressToCodeList(string newAddress) 
         {
-            addressesFromCode.Add(newAddress);
+            if (CheckAddressFromCode(newAddress)) 
+            {
+                addressesFromCode.Add(newAddress);
+            }
         }
         public void SetNewAddressToSitemapList(string newAddress)
         {
             addressesFromSitemap.Add(newAddress);
-        }
-        
-        public void SetCountOfSitemapAddresses(int count) 
-        {
-            countOfSitemapAddresses = count;
-        }
-        public void SetCountOfCodeAddresses(int count)
-        {
-            countOfCodeAddresses = count;
         }
         // setters //
 
@@ -77,12 +70,10 @@ namespace ConsoleSiteParsing
         public int GetCountOfCodeAddresses()
         {
             return addressesFromCode.Count();
-            //return countOfCodeAddresses;
         }
         public int GetCountOfSitemapAddresses()
         {
             return addressesFromSitemap.Count();
-            //return countOfSitemapAddresses;
         }
         // getters //
 
@@ -93,6 +84,16 @@ namespace ConsoleSiteParsing
             {
                 userAddress = userAddress.Insert(userAddress.Length, "/");
             }
+        }
+
+        private bool CheckAddressFromCode(string newCodeAddress)
+        {
+            if (!addressesFromCode.Contains(newCodeAddress))
+            {
+                return true;
+            }
+
+            return false;
         }
         // func //
     }
@@ -237,7 +238,7 @@ namespace ConsoleSiteParsing
                 //начиная с исходной ссылки и заканчивая знаком <
 
                 int firstCharIndexOfAddress, lastCharIndexOfAddress;
-                int startSearchIndex = 0, linksCounter = 0;
+                int startSearchIndex = 0;
 
                 do
                 {
@@ -252,13 +253,10 @@ namespace ConsoleSiteParsing
                             storage.SetNewAddressToSitemapList(sitemap.Substring(firstCharIndexOfAddress,
                             lastCharIndexOfAddress - firstCharIndexOfAddress));
 
-                            linksCounter++;
                             startSearchIndex = lastCharIndexOfAddress;
                         }
                     }
                 } while (firstCharIndexOfAddress != -1);
-
-                storage.SetCountOfSitemapAddresses(linksCounter);
             }
             else
             {
@@ -268,33 +266,39 @@ namespace ConsoleSiteParsing
 
         static void SourceCodeCheck(Storage storage)
         {
-            string siteCode;
-            string whatIShouldSearch = "<a href=\"/"; //<a href="*link*"
-            int firstCharIndexOfAddress, lastCharIndexOfAddress = 0;
-            int startSearchIndex = 0, linksCounter = 0;
+            string siteCode, tempNewAddress;
+            string startOfLink = "<a href=\"/"; //<a href="*link*"
+            string endOfLink = "\"";
+            int firstCharIndexOfAddress, lastCharIndexOfAddress, startSearchIndex = 0;
 
             Parsing(storage.GetAddressUser(), out siteCode);
-            
+
             do
             {
-                firstCharIndexOfAddress = siteCode.IndexOf(whatIShouldSearch, startSearchIndex);
+                firstCharIndexOfAddress = siteCode.IndexOf(startOfLink, startSearchIndex);
                 
                 if (firstCharIndexOfAddress != -1)
                 {
-                    lastCharIndexOfAddress = siteCode.IndexOf("/\" ", firstCharIndexOfAddress);
+                    firstCharIndexOfAddress += 9; //skip <a href="
+                    lastCharIndexOfAddress = siteCode.IndexOf(endOfLink, firstCharIndexOfAddress);
 
                     if (lastCharIndexOfAddress != -1)
                     {
-                        storage.SetNewAddressToCodeList(siteCode.Substring(firstCharIndexOfAddress,
-                        lastCharIndexOfAddress - firstCharIndexOfAddress));
+                        tempNewAddress = siteCode.Substring(firstCharIndexOfAddress,
+                            lastCharIndexOfAddress - firstCharIndexOfAddress);
 
-                        linksCounter++;
+                        if (tempNewAddress != "<a href=\"") //skip empty links
+                        {
+                            tempNewAddress = tempNewAddress.Remove(0, 1); //delete "/"
+                            tempNewAddress = tempNewAddress.Insert(0, storage.GetAddressUser());
+
+                            storage.SetNewAddressToCodeList(tempNewAddress);
+                        }
+                        
                         startSearchIndex = lastCharIndexOfAddress;
                     }
                 }
-            } while (lastCharIndexOfAddress != -1);
-
-            storage.SetCountOfCodeAddresses(linksCounter);
+            } while (firstCharIndexOfAddress != -1);
         }
     }
 }
