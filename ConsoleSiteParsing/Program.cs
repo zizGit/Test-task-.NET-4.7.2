@@ -11,12 +11,14 @@ namespace ConsoleSiteParsing
     class Storage
     {
         private static string userAddress, hostAddress, sitemapAddress;
-        private List<string> addressesFromCode = new List<string>();
-        private List<string> addressesFromSitemap = new List<string>();
+        private static int countOfSitemapAddresses, countOfCodeAddresses;
+        private static List<string> addressesFromCode = new List<string>();
+        private static List<string> addressesFromSitemap = new List<string>();
 
+        // setters //
         public void SetAddress(string address) 
         {
-            if(address.StartsWith("http") && address.Last().Equals("xml")) 
+            if(address.Contains("sitemap.xml")) 
             {
                 sitemapAddress = address;
             }
@@ -30,11 +32,26 @@ namespace ConsoleSiteParsing
             }
         }
 
-        public void SetNewAddressToList(string newAddress) 
+        public void SetNewAddressToCodeList(string newAddress) 
         {
             addressesFromCode.Add(newAddress);
         }
+        public void SetNewAddressToSitemapList(string newAddress)
+        {
+            addressesFromSitemap.Add(newAddress);
+        }
+        
+        public void SetCountOfSitemapAddresses(int count) 
+        {
+            countOfSitemapAddresses = count;
+        }
+        public void SetCountOfCodeAddresses(int count)
+        {
+            countOfCodeAddresses = count;
+        }
+        // setters //
 
+        // getters //
         public string GetAddressUser() 
         {
             return userAddress;
@@ -48,10 +65,24 @@ namespace ConsoleSiteParsing
             return sitemapAddress;
         }
 
-        public string GetAddressFromList(int index) 
+        public string GetAddressFromCodeList(int index) 
         {
             return addressesFromCode.ElementAt(index);
         }
+        public string GetAddressFromSitemapList(int index)
+        {
+            return addressesFromSitemap.ElementAt(index);
+        }
+
+        public int GetCountOfSitemapAddresses()
+        {
+            return countOfSitemapAddresses;
+        }
+        public int GetCountOfCodeAddresses()
+        {
+            return countOfCodeAddresses;
+        }
+        // getters //
     }
 
     class Program
@@ -162,31 +193,61 @@ namespace ConsoleSiteParsing
         //get urls from sitemap
         static void SitemapCheck(Storage storage) 
         {
-            string tempUserAddress, sitemap;
+            string tempUserAddressToSitemapAddress, sitemap;
 
-            tempUserAddress = storage.GetAddressUser();
+            tempUserAddressToSitemapAddress = storage.GetAddressUser();
 
-            if (tempUserAddress.Last().Equals("/")) 
+            if (tempUserAddressToSitemapAddress.Last().ToString().Equals("/")) 
             {
-                storage.SetAddress(tempUserAddress.Insert(tempUserAddress.Length, "sitemap.xml"));
-            }
+                storage.SetAddress(tempUserAddressToSitemapAddress.Insert(tempUserAddressToSitemapAddress.Length, "sitemap.xml"));
 
-            Console.Write("\nSitemap.xml - ");
-            if (Ping(storage.GetAddressHost())) 
-            {
-                Console.WriteLine("online");
-                Parsing(storage.GetAddressSitemap(), out sitemap);
-
-                if (sitemap.Contains("<a href =")) 
+                Console.Write("\nSitemap.xml - ");
+                if (Ping(storage.GetAddressHost()))
                 {
-                    Console.WriteLine("<a href = - founded");
-                }
+                    Console.WriteLine("online");
+                    Parsing(storage.GetAddressSitemap(), out sitemap);
 
-                
+                    if (sitemap.Contains(storage.GetAddressUser()))
+                    {
+                        Console.WriteLine("links - founded");
+
+                        //начиная с исходной ссылки и заканчивая пробелом или знаком <
+                        //индекс первого знака и первого пробела после него
+
+                        int firstCharIndexOfSourceAddress, lastCharIndexOfSourceAddress;
+                        int startSearchIndex = 0, linksCounter = 0;
+
+                        do
+                        {
+                            firstCharIndexOfSourceAddress = sitemap.IndexOf(storage.GetAddressUser(), startSearchIndex);
+
+                            if(firstCharIndexOfSourceAddress != -1) 
+                            {
+                                lastCharIndexOfSourceAddress = sitemap.IndexOf("<", firstCharIndexOfSourceAddress);
+
+                                storage.SetNewAddressToSitemapList(sitemap.Substring(firstCharIndexOfSourceAddress, 
+                                    lastCharIndexOfSourceAddress - firstCharIndexOfSourceAddress));
+
+                                linksCounter++;
+                                startSearchIndex = lastCharIndexOfSourceAddress;
+                            }
+                        } while (firstCharIndexOfSourceAddress != -1);
+
+                        storage.SetCountOfSitemapAddresses(linksCounter);
+                    }
+                    else 
+                    {
+                        Console.WriteLine("links - not founded");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("not found");
+                }
             }
-            else
+            else 
             {
-                Console.WriteLine("not found");
+                Console.WriteLine("ERROR! if (tempUserAddress.Last().ToString().Equals(''/''))");
             }
         }
     }
