@@ -24,7 +24,10 @@ namespace ConsoleSiteParsing
             else if (address.StartsWith("http"))
             {
                 userAddress = address;
-                CheckUserAddress();
+                if (!userAddress.Last().ToString().Equals("/"))
+                {
+                    userAddress = userAddress.Insert(userAddress.Length, "/");
+                }
             }
             else 
             {
@@ -34,7 +37,7 @@ namespace ConsoleSiteParsing
 
         public void SetNewAddressToCodeList(string newAddress) 
         {
-            if (CheckAddressFromCode(newAddress)) 
+            if (!addressesFromCode.Contains(newAddress)) 
             {
                 addressesFromCode.Add(newAddress);
             }
@@ -78,21 +81,10 @@ namespace ConsoleSiteParsing
         // getters //
 
         // func //
-        private void CheckUserAddress() 
+        public void SortLinksInAllList() 
         {
-            if (!userAddress.Last().ToString().Equals("/"))
-            {
-                userAddress = userAddress.Insert(userAddress.Length, "/");
-            }
-        }
-        private bool CheckAddressFromCode(string newCodeAddress)
-        {
-            if (!addressesFromCode.Contains(newCodeAddress))
-            {
-                return true;
-            }
-
-            return false;
+            addressesFromCode.Sort();
+            addressesFromSitemap.Sort();
         }
         // func //
     }
@@ -107,6 +99,8 @@ namespace ConsoleSiteParsing
 
             SitemapCheck(storage);
             SourceCodeCheck(storage);
+
+            storage.SortLinksInAllList();
 
             Output(storage);
         }
@@ -156,7 +150,7 @@ namespace ConsoleSiteParsing
 
         static void OutputDebugMode(Storage storage) 
         {
-            Console.WriteLine("All links from sitemap.xml: ");
+            Console.WriteLine("\nAll links from sitemap.xml: ");
             int counter = 0;
             do
             {
@@ -164,7 +158,7 @@ namespace ConsoleSiteParsing
                 counter++;
             } while (storage.GetCountOfSitemapAddresses() != counter);
 
-            Console.WriteLine("All links from site: ");
+            Console.WriteLine("\nAll links from site: ");
             counter = 0;
             do
             {
