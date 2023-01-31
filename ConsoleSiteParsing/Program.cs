@@ -149,7 +149,14 @@ namespace ConsoleSiteParsing
             Console.Write($"Count of links founded in site code - {storage.GetCountOfCodeAddresses()}\n");
             Console.WriteLine();
 
-            Console.WriteLine("Links from sitemap.xml: ");
+            OutputDebugMode(storage);
+
+            Console.ReadKey();
+        }
+
+        static void OutputDebugMode(Storage storage) 
+        {
+            Console.WriteLine("All links from sitemap.xml: ");
             int counter = 0;
             do
             {
@@ -157,15 +164,13 @@ namespace ConsoleSiteParsing
                 counter++;
             } while (storage.GetCountOfSitemapAddresses() != counter);
 
-            Console.WriteLine("Links from site: ");
+            Console.WriteLine("All links from site: ");
             counter = 0;
             do
             {
                 Console.WriteLine($"{counter + 1}. {storage.GetAddressFromCodeList(counter)}");
                 counter++;
             } while (storage.GetCountOfCodeAddresses() != counter);
-
-            Console.ReadKey();
         }
 
         static void Parsing(string address, out string toSave)
