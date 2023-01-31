@@ -13,6 +13,7 @@ namespace ConsoleSiteParsing
         private static string userAddress, hostAddress, sitemapAddress;
         private static List<string> addressesFromCode = new List<string>();
         private static List<string> addressesFromSitemap = new List<string>();
+        private static List<string> checkedAddressesFromCode = new List<string>();
 
         // setters //
         public void SetAddress(string address) 
@@ -37,6 +38,10 @@ namespace ConsoleSiteParsing
 
         public void SetNewAddressToCodeList(string newAddress) 
         {
+            if (!newAddress.Last().ToString().Equals("/"))
+            {
+                newAddress = newAddress.Insert(newAddress.Length, "/");
+            }
             if (!addressesFromCode.Contains(newAddress)) 
             {
                 addressesFromCode.Add(newAddress);
@@ -45,6 +50,10 @@ namespace ConsoleSiteParsing
         public void SetNewAddressToSitemapList(string newAddress)
         {
             addressesFromSitemap.Add(newAddress);
+        }
+        public void SetNewCheckedAddressToList(string newAddress)
+        {
+            checkedAddressesFromCode.Add(newAddress);
         }
         // setters //
 
@@ -70,6 +79,14 @@ namespace ConsoleSiteParsing
         {
             return addressesFromSitemap.ElementAt(index);
         }
+        public string GetCheckAddressFromList(int index)
+        {
+            return checkedAddressesFromCode.ElementAt(index);
+        }
+        public string GetCheckAddressFromList()
+        {
+            return checkedAddressesFromCode.AsReadOnly().ToString();
+        }
         public int GetCountOfCodeAddresses()
         {
             return addressesFromCode.Count();
@@ -78,6 +95,10 @@ namespace ConsoleSiteParsing
         {
             return addressesFromSitemap.Count();
         }
+        public int GetCountOfCheckedAddresses()
+        {
+            return checkedAddressesFromCode.Count();
+        }
         // getters //
 
         // func //
@@ -85,6 +106,7 @@ namespace ConsoleSiteParsing
         {
             addressesFromCode.Sort();
             addressesFromSitemap.Sort();
+            checkedAddressesFromCode.Sort();
         }
         // func //
     }
@@ -133,6 +155,8 @@ namespace ConsoleSiteParsing
 
         static void Output(Storage storage)
         {
+            List<string> sitemapFounded = new List<string>();
+
             Console.Clear();
 
             Console.Write($"User input the next link - {storage.GetAddressUser()}\n");
@@ -143,7 +167,31 @@ namespace ConsoleSiteParsing
             Console.Write($"Count of links founded in site code - {storage.GetCountOfCodeAddresses()}\n");
             Console.WriteLine();
 
-            OutputDebugMode(storage);
+            Console.WriteLine("Urls FOUNDED IN SITEMAP.XML but not founded after crawling a web site:");
+
+            //todo for cycles
+            for(int i = 0; i < storage.GetCountOfSitemapAddresses(); i++) 
+            {
+                for(int j = 0; j < storage.GetCountOfCodeAddresses(); j++) 
+                {
+                    if(storage.GetAddressFromSitemapList(i) != storage.GetAddressFromCodeList(j)) 
+                    {
+                        if (!sitemapFounded.Contains(storage.GetAddressFromSitemapList(i)))
+                        {
+                            sitemapFounded.Add(storage.GetAddressFromSitemapList(i));
+                        }
+                    }
+                }
+            }
+
+            int counter = 0;
+            do
+            {
+                Console.WriteLine($"{counter + 1}. {sitemapFounded}");
+                counter++;
+            } while (sitemapFounded.Count() != counter);
+
+            //OutputDebugMode(storage);
 
             Console.ReadKey();
         }
@@ -280,36 +328,54 @@ namespace ConsoleSiteParsing
             string siteCode, tempNewAddress;
             string startOfLink = "<a href=\"/"; //<a href="*link*"
             string endOfLink = "\"";
-            int firstCharIndexOfAddress, lastCharIndexOfAddress, startSearchIndex = 0;
+            string[] ignoreLinksWith = { "#", "?" };
+            int firstCharIndexOfAddress, lastCharIndexOfAddress; 
+            int startSearchIndex = 0, newLinksCounter = 0;
 
             Parsing(storage.GetAddressUser(), out siteCode);
+            storage.SetNewCheckedAddressToList(storage.GetAddressUser());
 
             do
             {
-                firstCharIndexOfAddress = siteCode.IndexOf(startOfLink, startSearchIndex);
-                
-                if (firstCharIndexOfAddress != -1)
+                do
                 {
-                    firstCharIndexOfAddress += 9; //skip <a href="
-                    lastCharIndexOfAddress = siteCode.IndexOf(endOfLink, firstCharIndexOfAddress);
+                    firstCharIndexOfAddress = siteCode.IndexOf(startOfLink, startSearchIndex);
 
-                    if (lastCharIndexOfAddress != -1)
+                    if (firstCharIndexOfAddress != -1)
                     {
-                        tempNewAddress = siteCode.Substring(firstCharIndexOfAddress,
-                            lastCharIndexOfAddress - firstCharIndexOfAddress);
+                        firstCharIndexOfAddress += 9; //skip <a href="
+                        lastCharIndexOfAddress = siteCode.IndexOf(endOfLink, firstCharIndexOfAddress);
 
-                        if (tempNewAddress != "<a href=\"") //skip empty links
+                        if (lastCharIndexOfAddress != -1)
                         {
-                            tempNewAddress = tempNewAddress.Remove(0, 1); //delete "/"
-                            tempNewAddress = tempNewAddress.Insert(0, storage.GetAddressUser());
+                            tempNewAddress = siteCode.Substring(firstCharIndexOfAddress,
+                                lastCharIndexOfAddress - firstCharIndexOfAddress);
 
-                            storage.SetNewAddressToCodeList(tempNewAddress);
+                            if (!tempNewAddress.Contains(ignoreLinksWith[0]) && !tempNewAddress.Contains(ignoreLinksWith[1]))
+                            {
+                                tempNewAddress = tempNewAddress.Remove(0, 1); //delete "/"
+                                tempNewAddress = tempNewAddress.Insert(0, storage.GetAddressUser());
+
+                                storage.SetNewAddressToCodeList(tempNewAddress);
+                            }
+
+                            startSearchIndex = lastCharIndexOfAddress;
                         }
-                        
-                        startSearchIndex = lastCharIndexOfAddress;
                     }
-                }
-            } while (firstCharIndexOfAddress != -1);
+                } while (firstCharIndexOfAddress != -1);
+
+                startSearchIndex = 0;
+
+                do
+                { 
+                    if (!storage.GetCheckAddressFromList().Contains(storage.GetAddressFromCodeList(newLinksCounter)))
+                    {
+                        Parsing(storage.GetAddressFromCodeList(newLinksCounter), out siteCode);
+                        storage.SetNewCheckedAddressToList(storage.GetAddressFromCodeList(newLinksCounter));
+                    }
+                    newLinksCounter++;
+                } while (storage.GetCheckAddressFromList().Contains(storage.GetAddressFromCodeList(newLinksCounter - 1)));
+            } while (storage.GetCountOfCodeAddresses() != storage.GetCountOfCheckedAddresses());
         }
     }
 }
