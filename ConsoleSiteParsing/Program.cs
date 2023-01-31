@@ -14,6 +14,7 @@ namespace ConsoleSiteParsing
         private static List<string> addressesFromCode = new List<string>();
         private static List<string> addressesFromSitemap = new List<string>();
         private static List<string> checkedAddressesFromCode = new List<string>();
+        private static List<string> allAddresses = new List<string>();
 
         // setters //
         public void SetAddress(string address) 
@@ -71,17 +72,29 @@ namespace ConsoleSiteParsing
             return sitemapAddress;
         }
 
-        public string GetAddressFromCodeList(int index) 
+        public string GetAddressFromCodeList(int index)
         {
             return addressesFromCode.ElementAt(index);
+        }
+        public string GetAddressFromCodeList()
+        {
+            return addressesFromCode.AsReadOnly().ToString();
         }
         public string GetAddressFromSitemapList(int index)
         {
             return addressesFromSitemap.ElementAt(index);
         }
+        public string GetAddressFromSitemapList()
+        {
+            return addressesFromSitemap.AsReadOnly().ToString();
+        }
         public string GetCheckAddressFromList(int index)
         {
             return checkedAddressesFromCode.ElementAt(index);
+        }
+        public string GetAllAddressesFromList(int index)
+        {
+            return allAddresses.ElementAt(index);
         }
         public string GetCheckAddressFromList()
         {
@@ -99,6 +112,10 @@ namespace ConsoleSiteParsing
         {
             return checkedAddressesFromCode.Count();
         }
+        public int GetCountOfAllAddresses()
+        {
+            return allAddresses.Count();
+        }
         // getters //
 
         // func //
@@ -107,6 +124,26 @@ namespace ConsoleSiteParsing
             addressesFromCode.Sort();
             addressesFromSitemap.Sort();
             checkedAddressesFromCode.Sort();
+            allAddresses.Sort();
+        }
+        public void MergeLinks() 
+        {
+            string tempLink;
+            int index = 0;
+
+            allAddresses = addressesFromSitemap;
+
+            do
+            {
+                tempLink = addressesFromCode.ElementAt(index);
+
+                if (!allAddresses.Contains(tempLink))
+                {
+                    allAddresses.Add(tempLink);
+                }
+
+                index++;
+            } while (index != addressesFromCode.Count());
         }
         // func //
     }
@@ -119,9 +156,12 @@ namespace ConsoleSiteParsing
 
             Input(storage);
 
+            Console.WriteLine("Program crawls the site, please wait");
+
             SitemapCheck(storage);
             SourceCodeCheck(storage);
 
+            storage.MergeLinks();
             storage.SortLinksInAllList();
 
             Output(storage);
@@ -134,7 +174,7 @@ namespace ConsoleSiteParsing
             
             do
             {
-                Console.WriteLine("Example URL: https://ukad-group.com/"); //for debug
+                Console.WriteLine("Example URL: https://ukad-group.com/");
                 Console.Write("Input URL: ");
                 tempAddress = Console.ReadLine();
 
@@ -155,7 +195,8 @@ namespace ConsoleSiteParsing
 
         static void Output(Storage storage)
         {
-            List<string> sitemapFounded = new List<string>();
+            int index = 0;
+            string tempLink;
 
             Console.Clear();
 
@@ -165,31 +206,45 @@ namespace ConsoleSiteParsing
             Console.WriteLine();
             Console.Write($"Count of links founded in sitemap.xml - {storage.GetCountOfSitemapAddresses()}\n");
             Console.Write($"Count of links founded in site code - {storage.GetCountOfCodeAddresses()}\n");
+            Console.Write($"Count of all founded links - {storage.GetCountOfAllAddresses()}\n");
             Console.WriteLine();
 
             Console.WriteLine("Urls FOUNDED IN SITEMAP.XML but not founded after crawling a web site:");
-
-            //todo for cycles
-            for(int i = 0; i < storage.GetCountOfSitemapAddresses(); i++) 
-            {
-                for(int j = 0; j < storage.GetCountOfCodeAddresses(); j++) 
-                {
-                    if(storage.GetAddressFromSitemapList(i) != storage.GetAddressFromCodeList(j)) 
-                    {
-                        if (!sitemapFounded.Contains(storage.GetAddressFromSitemapList(i)))
-                        {
-                            sitemapFounded.Add(storage.GetAddressFromSitemapList(i));
-                        }
-                    }
-                }
-            }
-
-            int counter = 0;
             do
             {
-                Console.WriteLine($"{counter + 1}. {sitemapFounded}");
-                counter++;
-            } while (sitemapFounded.Count() != counter);
+                if (index == storage.GetCountOfCodeAddresses())
+                {
+                    do
+                    {
+                        Console.WriteLine(storage.GetAddressFromSitemapList(index));
+                        index++;
+                    } while (index != storage.GetCountOfSitemapAddresses());
+                    break;
+                }
+
+                tempLink = storage.GetAllAddressesFromList(index);
+
+                if (storage.GetAddressFromSitemapList().Contains(tempLink) && !storage.GetAddressFromCodeList().Contains(tempLink))
+                {
+                    Console.WriteLine(tempLink);
+                }
+
+                index++;
+            } while (index != storage.GetCountOfAllAddresses());
+
+            index = 0;
+            Console.WriteLine("\nUrls FOUNDED BY CRAWLING THE WEBSITE but not in sitemap.xml");
+            do
+            {
+                tempLink = storage.GetAllAddressesFromList(index);
+
+                if (!storage.GetAddressFromSitemapList().Contains(tempLink) && storage.GetAddressFromCodeList().Contains(tempLink))
+                {
+                    Console.WriteLine(tempLink);
+                }
+
+                index++;
+            } while (index != storage.GetCountOfAllAddresses());
 
             //OutputDebugMode(storage);
 
@@ -218,7 +273,14 @@ namespace ConsoleSiteParsing
         static void Parsing(string address, out string toSave)
         {
             WebClient wc = new WebClient();
-            toSave = wc.DownloadString(address);
+            try 
+            {
+                toSave = wc.DownloadString(address);
+            }
+            catch 
+            {
+                toSave = " ";
+            }
         }
 
         static bool Ping(string hostAddress)
@@ -335,6 +397,8 @@ namespace ConsoleSiteParsing
             Parsing(storage.GetAddressUser(), out siteCode);
             storage.SetNewCheckedAddressToList(storage.GetAddressUser());
 
+            //bug - program dont see the link if link started with href=
+
             do
             {
                 do
@@ -351,7 +415,7 @@ namespace ConsoleSiteParsing
                             tempNewAddress = siteCode.Substring(firstCharIndexOfAddress,
                                 lastCharIndexOfAddress - firstCharIndexOfAddress);
 
-                            if (!tempNewAddress.Contains(ignoreLinksWith[0]) && !tempNewAddress.Contains(ignoreLinksWith[1]))
+                            if (Array.IndexOf(ignoreLinksWith, tempNewAddress) == -1) 
                             {
                                 tempNewAddress = tempNewAddress.Remove(0, 1); //delete "/"
                                 tempNewAddress = tempNewAddress.Insert(0, storage.GetAddressUser());
@@ -371,7 +435,10 @@ namespace ConsoleSiteParsing
                     if (!storage.GetCheckAddressFromList().Contains(storage.GetAddressFromCodeList(newLinksCounter)))
                     {
                         Parsing(storage.GetAddressFromCodeList(newLinksCounter), out siteCode);
-                        storage.SetNewCheckedAddressToList(storage.GetAddressFromCodeList(newLinksCounter));
+                        if(siteCode != " ") 
+                        {
+                            storage.SetNewCheckedAddressToList(storage.GetAddressFromCodeList(newLinksCounter));
+                        }
                     }
                     newLinksCounter++;
                 } while (storage.GetCheckAddressFromList().Contains(storage.GetAddressFromCodeList(newLinksCounter - 1)));
