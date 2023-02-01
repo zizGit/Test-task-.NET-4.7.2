@@ -5,7 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Http;
 using System.Web;
+using System.Diagnostics;
+using System.IO;
 
 namespace ConsoleSiteParsing
 {
@@ -193,7 +196,7 @@ namespace ConsoleSiteParsing
                 if (tempAddress.StartsWith("http://") || tempAddress.StartsWith("https://"))
                 {
                     storage.SetAddress(tempAddress);
-                    UrlToHost(storage);
+                    storage.SetAddress(UrlToHost(storage.GetAddressUser()));
                     inputCheck = Ping(storage.GetAddressHost());
                 }
                 else
@@ -263,7 +266,18 @@ namespace ConsoleSiteParsing
                 } while (index != storage.GetCountOfAllAddresses());
             }
 
-            OutputDebugMode(storage);
+            Console.WriteLine("\nTiming");
+
+            index = 0;
+            do
+            {
+                //Ping(storage);
+                index++;
+            } while (index != storage.GetCountOfAllAddresses());
+
+            
+
+            //OutputDebugMode(storage);
 
             Console.ReadKey();
         }
@@ -298,6 +312,7 @@ namespace ConsoleSiteParsing
         {
             WebClient wc = new WebClient();
             wc.Credentials = CredentialCache.DefaultNetworkCredentials; //new
+
             try 
             {
                 toSave = wc.DownloadString(address);
@@ -317,7 +332,7 @@ namespace ConsoleSiteParsing
             try
             {
                 PingReply reply = pingSend.Send(hostAddress);
-
+                
                 if (reply.Status.ToString() == "Success")
                 {
                     return true;
@@ -336,44 +351,84 @@ namespace ConsoleSiteParsing
             return false;
         }
 
-        // https://ukad-group.com/ --> www.ukad-group.com
-        static void UrlToHost(Storage storage)
+        static void Ping(Storage storage)
         {
-            string tempUserAddress, tempHostAddress;
-            tempUserAddress = storage.GetAddressUser();
+            int index = 0;
+            Ping pingSend = new Ping();
+            PingReply reply;
 
-            if (!tempUserAddress.Contains("www.")) 
+            HttpRequestMessage test2 = new HttpRequestMessage(HttpMethod.Get, "https://ukad-group.com/xamarin-development-services/");
+            HttpClient test = new HttpClient();
+            var test3 = new Stopwatch();
+
+            var request = WebRequest.Create("https://ukad-group.com/xamarin-development-services/");
+            var watch = Stopwatch.StartNew();
+            try
+            {
+                using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                {
+                    using (Stream answer = response.GetResponseStream())
+                    {
+                        // do something
+                        watch.Stop();
+                        Console.WriteLine($"Success at {watch.ElapsedMilliseconds}");
+                    }
+                }
+            }
+            catch (WebException e)
+            {
+                // If we got here, it was a timeout exception.
+                watch.Stop();
+                Console.WriteLine($"Error occurred at {watch.ElapsedMilliseconds} \n {e}");
+            }
+
+            /*
+            do
+            {
+                reply = pingSend.Send(UrlToHost(storage.GetAllAddressesFromList(index)));
+                Console.WriteLine($"{storage.GetAllAddressesFromList(index)} - {reply.Status.ToString()} - {reply.RoundtripTime.ToString()} ms");
+                index++;
+            } while (index != storage.GetCountOfAllAddresses());  
+            */
+        }
+
+        // https://ukad-group.com/ --> www.ukad-group.com/angular-development-services
+        static string UrlToHost(string address)
+        {
+            string hostAddress;
+            var fullUrl = new Uri("https://ukad-group.com/");
+
+            if (!address.Contains("www.")) 
             {
                 // https://ukad-group.com/ --> www.ukad-group.com/
-                if (tempUserAddress.StartsWith("http://"))
+                if (address.StartsWith("http://"))
                 {
-                    tempHostAddress = tempUserAddress.Replace("http://", "www.");
+                    hostAddress = address.Replace("http://", "www.");
                 }
                 else
                 {
-                    tempHostAddress = tempUserAddress.Replace("https://", "www.");
+                    hostAddress = address.Replace("https://", "www.");
                 }
             }
-            else if (tempUserAddress.StartsWith("http://www."))
+            else if (address.StartsWith("http://www."))
             {
-                tempHostAddress = tempUserAddress.Remove(0, 7);
+                hostAddress = address.Remove(0, 7);
             }
             else 
             {
-                tempHostAddress = tempUserAddress.Remove(0, 8);
+                hostAddress = address.Remove(0, 8);
             }
 
             // www.ukad-group.com//////// --> www.ukad-group.com
             while (true) 
             {
-                if (tempHostAddress.Last().ToString().Equals("/"))
+                if (hostAddress.Last().ToString().Equals("/"))
                 {
-                    tempHostAddress = tempHostAddress.Remove(tempHostAddress.Length - 1);
+                    hostAddress = hostAddress.Remove(hostAddress.Length - 1);
                 }
                 else
                 {
-                    storage.SetAddress(tempHostAddress);
-                    break;
+                    return hostAddress;
                 }
             }
         }
@@ -503,7 +558,7 @@ namespace ConsoleSiteParsing
 
                                 if (!buf.StartsWith("//") && !buf.StartsWith("/fonts") && !buf.StartsWith("/images") &&
                                     !buf.Contains("/media/") && !buf.Contains("png") && !buf.Contains("pdf") && 
-                                    !buf.Contains("json"))
+                                    !buf.Contains("json") && !buf.Contains("ico") && !buf.Contains("#"))
                                 {
                                     if (buf.StartsWith("/"))
                                     {
