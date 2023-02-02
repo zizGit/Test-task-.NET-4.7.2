@@ -80,17 +80,9 @@ namespace ConsoleSiteParsing
         {
             return addressesFromCode.ElementAt(index);
         }
-        public string GetAddressFromCodeList()
-        {
-            return addressesFromCode.AsReadOnly().ToString();
-        }
         public string GetAddressFromSitemapList(int index)
         {
             return addressesFromSitemap.ElementAt(index);
-        }
-        public string GetAddressFromSitemapList()
-        {
-            return addressesFromSitemap.AsReadOnly().ToString();
         }
         public string GetCheckAddressFromList(int index)
         {
@@ -227,19 +219,27 @@ namespace ConsoleSiteParsing
             {
                 do
                 {
-                    if (index == storage.GetCountOfCodeAddresses())
-                    {
-                        do
-                        {
-                            Console.WriteLine(storage.GetAddressFromSitemapList(index));
-                            index++;
-                        } while (index != storage.GetCountOfSitemapAddresses());
-                        break;
-                    }
-
                     tempLink = storage.GetAllAddressesFromList(index);
 
-                    if (storage.GetAddressFromSitemapList().Contains(tempLink) && !storage.GetAddressFromCodeList().Contains(tempLink))
+                    bool test = true;
+
+                    for (int j = 0; j < storage.GetCountOfSitemapAddresses(); j++) 
+                    {
+                        if (storage.GetAddressFromSitemapList(j).Contains(tempLink))
+                        {
+                            for (int k = 0; k < storage.GetCountOfCodeAddresses(); k++) 
+                            {
+                                if (storage.GetAddressFromCodeList(k).Contains(tempLink)) 
+                                {
+                                    test = false;
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                    }
+
+                    if (test) 
                     {
                         Console.WriteLine(tempLink);
                     }
@@ -255,9 +255,26 @@ namespace ConsoleSiteParsing
             {
                 do
                 {
+                    int test = 0;
                     tempLink = storage.GetAllAddressesFromList(index);
 
-                    if (!storage.GetAddressFromSitemapList().Contains(tempLink) && storage.GetAddressFromCodeList().Contains(tempLink))
+                    for (int j = 0; j < storage.GetCountOfCodeAddresses(); j++)
+                    {
+                        if (storage.GetAddressFromCodeList(j).Contains(tempLink))
+                        {
+                            for (int k = 0; k < storage.GetCountOfSitemapAddresses(); k++)
+                            {
+                                if (!storage.GetAddressFromSitemapList(k).Contains(tempLink))
+                                {
+                                    test++;
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                    }
+
+                    if (test + 1 == storage.GetCountOfSitemapAddresses()) 
                     {
                         Console.WriteLine(tempLink);
                     }
@@ -274,8 +291,6 @@ namespace ConsoleSiteParsing
                 //Ping(storage);
                 index++;
             } while (index != storage.GetCountOfAllAddresses());
-
-            
 
             //OutputDebugMode(storage);
 
@@ -509,14 +524,9 @@ namespace ConsoleSiteParsing
 
         static void SourceCodeCheck(Storage storage)
         {
-            string siteCode, tempNewAddress;
-            string startOfLink = "<a href=\"/"; //<a href="*link*"
-            string endOfLink = "\"";
+            string siteCode;
             string[] splitCode;
             int index = 0;
-            char[] ignoreLinksWith = { '#', '?' };
-            int firstCharIndexOfAddress, lastCharIndexOfAddress; 
-            int startSearchIndex = 0, newLinksCounter = 0;
 
             Parsing(storage.GetAddressUser(), out siteCode);
             storage.SetNewCheckedAddressToList(storage.GetAddressUser());
@@ -534,36 +544,52 @@ namespace ConsoleSiteParsing
                     foreach (string str in splitCode)
                     {
                         /*начинаем двигаться по строке с шагом 1 и с -6 символа с конца*/
-                        for (int I = 0; I < str.Length - 6; I++)
+                        for (int I = 0; I < str.Length - 5; I++)
                         {
                             /*читаем сразу 4 символа и смотрим что это*/
-                            if (str.Substring(I, 6) == "href=\"")
+                            if (str.Substring(I, 5) == "href=") // \"
                             {
 
                                 /*ссылка найдена ура будем ее читать*/
                                 buf = "";
 
-                                /*заходим внутрь сдвигая индекс на href=" 6 символов*/
-                                I += 6;
-
-                                /*читаем пока не упремся в двойную кавычку или конец строки*/
-                                while (str.Length != I && str.Substring(I, 1) != @"""")
+                                if (str.Substring(I, 6) == "href=\"") 
                                 {
-                                    /*собираем в буфер ссылку*/
-                                    buf += str.Substring(I, 1);
-
-                                    /*берем следующий символ*/
-                                    I++;
+                                    /*заходим внутрь сдвигая индекс на href=" 6 символов*/
+                                    I += 6;
+                                }
+                                else 
+                                {
+                                    I += 5;
                                 }
 
-                                if (!buf.StartsWith("//") && !buf.StartsWith("/fonts") && !buf.StartsWith("/images") &&
+                                string strTest = str.Remove(0, I);
+                                //I = 0;
+                                int indexTest = 0;
+
+                                /*читаем пока не упремся в двойную кавычку или конец строки*/
+                                while (strTest.Length != indexTest && strTest.Substring(indexTest, 1) != " " && strTest.Substring(indexTest, 1) != @"""")
+                                {
+                                    /*собираем в буфер ссылку*/
+                                    buf += strTest.Substring(indexTest, 1);
+
+                                    /*берем следующий символ*/
+                                    indexTest++;
+                                }
+
+                                if (!buf.StartsWith("//") && !buf.Contains("/fonts") && !buf.StartsWith("/images") &&
                                     !buf.Contains("/media/") && !buf.Contains("png") && !buf.Contains("pdf") && 
-                                    !buf.Contains("json") && !buf.Contains("ico") && !buf.Contains("#"))
+                                    !buf.Contains("json") && !buf.Contains("ico") && !buf.Contains("#") && !buf.Contains("css") && 
+                                    buf.Any())
                                 {
                                     if (buf.StartsWith("/"))
                                     {
                                         buf = buf.Remove(0, 1); //delete "/"
                                         buf = buf.Insert(0, storage.GetAddressUser());
+                                    }
+                                    if (buf.EndsWith("\"")) 
+                                    {
+                                        buf = buf.Remove(buf.Length - 1, 1);
                                     }
                                     if (buf.StartsWith(storage.GetAddressUser()))
                                     {
