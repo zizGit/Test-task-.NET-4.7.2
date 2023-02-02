@@ -151,6 +151,52 @@ namespace ConsoleSiteParsing
         // func //
     }
 
+    //https://learn.microsoft.com/ru-ru/dotnet/api/system.collections.generic.list-1.sort?view=net-7.0
+    public class Part : IEquatable<Part>, IComparable<Part>
+    {
+        public string PartName { get; set; }
+
+        public long PartId { get; set; }
+
+        public override string ToString()
+        {
+            return "Ping: " + PartId + " ms" + "   Address: " + PartName;
+        }
+        public override bool Equals(object obj)
+        {
+            if (obj == null) return false;
+            Part objAsPart = obj as Part;
+            if (objAsPart == null) return false;
+            else return Equals(objAsPart);
+        }
+        public int SortByNameAscending(string name1, string name2)
+        {
+
+            return name1.CompareTo(name2);
+        }
+
+        // Default comparer for Part type.
+        public int CompareTo(Part comparePart)
+        {
+            // A null value means that this object is greater.
+            if (comparePart == null)
+                return 1;
+
+            else
+                return this.PartId.CompareTo(comparePart.PartId);
+        }
+        public long GetHashCode_()
+        {
+            return PartId;
+        }
+        public bool Equals(Part other)
+        {
+            if (other == null) return false;
+            return (this.PartId.Equals(other.PartId));
+        }
+        // Should also override == and != operators.
+    }
+
     class Program
     {
         static void Main()
@@ -175,7 +221,7 @@ namespace ConsoleSiteParsing
         {
             string tempAddress; //user input address
             bool inputCheck = false;
-            
+
             do
             {
                 Console.WriteLine("Program has been tested on the next URLs: ");
@@ -188,7 +234,10 @@ namespace ConsoleSiteParsing
                 if (tempAddress.StartsWith("http://") || tempAddress.StartsWith("https://"))
                 {
                     storage.SetAddress(tempAddress);
-                    storage.SetAddress(UrlToHost(storage.GetAddressUser()));
+
+                    var hostAddress = new Uri(tempAddress);
+                    storage.SetAddress(hostAddress.Host);
+
                     inputCheck = Ping(storage.GetAddressHost());
                 }
                 else
@@ -204,6 +253,7 @@ namespace ConsoleSiteParsing
         {
             int index = 0;
             string tempLink;
+            List<Part> parts = new List<Part>();
 
             Console.Write($"User input the next link - {storage.GetAddressUser()}\n");
             Console.Write($"Host link - {storage.GetAddressHost()}\n");
@@ -250,7 +300,6 @@ namespace ConsoleSiteParsing
 
             index = 0;
             Console.WriteLine("\nUrls FOUNDED BY CRAWLING THE WEBSITE but not in sitemap.xml");
-
             if (storage.GetCountOfAllAddresses() > 0) 
             {
                 do
@@ -284,13 +333,19 @@ namespace ConsoleSiteParsing
             }
 
             Console.WriteLine("\nTiming");
-
             index = 0;
             do
             {
-                //Ping(storage);
+                PingLinks(storage.GetAllAddressesFromList(index), parts);
                 index++;
             } while (index != storage.GetCountOfAllAddresses());
+
+            parts.Sort();
+
+            foreach (Part aPart in parts)
+            {
+                Console.WriteLine(aPart);
+            }
 
             //OutputDebugMode(storage);
 
@@ -366,85 +421,29 @@ namespace ConsoleSiteParsing
             return false;
         }
 
-        static void Ping(Storage storage)
+        static bool PingLinks(string address, List<Part> parts)
         {
-            int index = 0;
-            Ping pingSend = new Ping();
-            PingReply reply;
-
-            HttpRequestMessage test2 = new HttpRequestMessage(HttpMethod.Get, "https://ukad-group.com/xamarin-development-services/");
-            HttpClient test = new HttpClient();
-            var test3 = new Stopwatch();
-
-            var request = WebRequest.Create("https://ukad-group.com/xamarin-development-services/");
+            var request = WebRequest.Create(address);
             var watch = Stopwatch.StartNew();
+            
             try
             {
                 using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
                 {
                     using (Stream answer = response.GetResponseStream())
                     {
-                        // do something
                         watch.Stop();
-                        Console.WriteLine($"Success at {watch.ElapsedMilliseconds}");
+                        parts.Add(new Part() { PartName = address, PartId = watch.ElapsedMilliseconds / 10 });
+                        //Console.WriteLine($"{address} - Success - {watch.ElapsedMilliseconds / 10} ms");
+                        return true;
                     }
                 }
             }
             catch (WebException e)
             {
-                // If we got here, it was a timeout exception.
                 watch.Stop();
-                Console.WriteLine($"Error occurred at {watch.ElapsedMilliseconds} \n {e}");
-            }
-
-            /*
-            do
-            {
-                reply = pingSend.Send(UrlToHost(storage.GetAllAddressesFromList(index)));
-                Console.WriteLine($"{storage.GetAllAddressesFromList(index)} - {reply.Status.ToString()} - {reply.RoundtripTime.ToString()} ms");
-                index++;
-            } while (index != storage.GetCountOfAllAddresses());  
-            */
-        }
-
-        // https://ukad-group.com/ --> www.ukad-group.com/angular-development-services
-        static string UrlToHost(string address)
-        {
-            string hostAddress;
-            var fullUrl = new Uri("https://ukad-group.com/");
-
-            if (!address.Contains("www.")) 
-            {
-                // https://ukad-group.com/ --> www.ukad-group.com/
-                if (address.StartsWith("http://"))
-                {
-                    hostAddress = address.Replace("http://", "www.");
-                }
-                else
-                {
-                    hostAddress = address.Replace("https://", "www.");
-                }
-            }
-            else if (address.StartsWith("http://www."))
-            {
-                hostAddress = address.Remove(0, 7);
-            }
-            else 
-            {
-                hostAddress = address.Remove(0, 8);
-            }
-
-            // www.ukad-group.com//////// --> www.ukad-group.com
-            while (true) 
-            {
-                if (hostAddress.Last().ToString().Equals("/"))
-                {
-                    hostAddress = hostAddress.Remove(hostAddress.Length - 1);
-                }
-                else
-                {
-                    return hostAddress;
-                }
+                //Console.WriteLine($"{address} - {e.Message} - {watch.ElapsedMilliseconds / 10} ms");
+                return false;
             }
         }
 
