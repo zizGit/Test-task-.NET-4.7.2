@@ -136,20 +136,29 @@ namespace ConsoleSiteParsing
                 Console.Write("\nInput URL: ");
                 tempAddress = Console.ReadLine();
 
-                if (tempAddress.StartsWith("http://") || tempAddress.StartsWith("https://"))
+                if(!tempAddress.Contains(" ")) 
                 {
-                    storage.SetAddress(tempAddress);
+                    if (tempAddress.StartsWith("http://") || tempAddress.StartsWith("https://"))
+                    {
+                        storage.SetAddress(tempAddress);
 
-                    var hostAddress = new Uri(tempAddress);
-                    storage.SetAddress(hostAddress.Host);
+                        var hostAddress = new Uri(tempAddress);
+                        storage.SetAddress(hostAddress.Host);
 
-                    inputCheck = Program.Ping(storage.GetAddressHost());
+                        inputCheck = Program.Ping(storage.GetAddressHost());
+                    }
+                    else
+                    {
+                        Console.Clear();
+                        Console.WriteLine("Link should start with \"http://\" or \"https://\"\n");
+                    }
                 }
-                else
+                else 
                 {
                     Console.Clear();
-                    Console.WriteLine("Input error! Please try again.\n");
+                    Console.WriteLine("Link should not contain \" \" (space)!\n");
                 }
+                
             } while (!inputCheck);
 
             Console.Clear();
