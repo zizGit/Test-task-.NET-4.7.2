@@ -172,13 +172,13 @@ namespace ConsoleSiteParsing
             List<Part> parts = new List<Part>(); //from Microsoft documentation
 
             Console.WriteLine("Urls FOUNDED IN SITEMAP.XML but not founded after crawling a web site:");
-            //if sitemap list contain link and link-from-code list also contain link --> Console.WriteLine(tempLink); = false
+            //if sitemap list contain link and link-from-code list NOT contain link --> Console.WriteLine(tempLink); = true
             if (storage.GetCountOfAllAddresses() > 0)
             {
                 do
                 {
                     tempLink = storage.GetAllAddressesFromList(index);
-                    bool urlNotFoundAfterCrawling = true;
+                    bool urlNotFoundAfterCrawling = false;
 
                     for (int j = 0; j < storage.GetCountOfSitemapAddresses(); j++)
                     {
@@ -186,7 +186,11 @@ namespace ConsoleSiteParsing
                         {
                             for (int k = 0; k < storage.GetCountOfCodeAddresses(); k++)
                             {
-                                if (storage.GetAddressFromCodeList(k).Contains(tempLink))
+                                if (!storage.GetAddressFromCodeList(k).Contains(tempLink))
+                                {
+                                    urlNotFoundAfterCrawling = true;
+                                }
+                                else 
                                 {
                                     urlNotFoundAfterCrawling = false;
                                     break;
@@ -294,26 +298,16 @@ namespace ConsoleSiteParsing
     public class Part : IEquatable<Part>, IComparable<Part>
     {
         public string PartName { get; set; }
-
         public long PartId { get; set; }
 
         public override string ToString()
         {
             return "Ping: " + PartId + " ms " + "    " + PartName;
         }
-        public override bool Equals(object obj)
-        {
-            if (obj == null) return false;
-            Part objAsPart = obj as Part;
-            if (objAsPart == null) return false;
-            else return Equals(objAsPart);
-        }
         public int SortByNameAscending(string name1, string name2)
         {
-
             return name1.CompareTo(name2);
         }
-
         // Default comparer for Part type.
         public int CompareTo(Part comparePart)
         {
@@ -323,10 +317,6 @@ namespace ConsoleSiteParsing
 
             else
                 return this.PartId.CompareTo(comparePart.PartId);
-        }
-        public long GetHashCode_()
-        {
-            return PartId;
         }
         public bool Equals(Part other)
         {
