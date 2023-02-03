@@ -472,6 +472,12 @@ namespace ConsoleSiteParsing
                                     tempSitemapLink = tempSitemapLink.Remove(indexOfXml, tempSitemapLink.Length - indexOfXml);
                                 }
 
+                                if (tempSitemapLink.StartsWith("//") && tempSitemapLink.Contains(storage.GetAddressUser())) 
+                                {
+                                    Uri protocol = new Uri(tempSitemapLink);
+                                    tempSitemapLink = tempSitemapLink.Insert(0, protocol.Scheme + ":");
+                                }
+
                                 //ignore links with:
                                 //hardcode, I know ;-;
                                 if (!tempSitemapLink.StartsWith("//") && !tempSitemapLink.Contains(".png") && !tempSitemapLink.Contains(".pdf") &&
@@ -561,6 +567,13 @@ namespace ConsoleSiteParsing
                                 {
                                     buf += strTest.Substring(indexTest, 1); // собираем в буфер ссылку
                                     indexTest++; // берем следующий символ
+                                }
+
+                                //если ссылка относительная и не ведет на внешний ресурс
+                                if (buf.StartsWith("//") && buf.Contains(storage.GetAddressUser()))
+                                {
+                                    Uri protocol = new Uri(buf);
+                                    buf = buf.Insert(0, protocol.Scheme + ":");
                                 }
 
                                 //ignore links with:
