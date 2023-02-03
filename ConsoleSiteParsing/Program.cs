@@ -361,7 +361,14 @@ namespace ConsoleSiteParsing
             //если сайтмап ссылка относительная
             if (address.Contains(".xml") && !address.StartsWith(storage.GetAddressUser())) 
             {
-                address = address.Remove(0, 1); // delete "/"
+                if (address.StartsWith("//")) 
+                {
+                    address = address.Remove(0, 2); // delete "//"
+                }
+                else 
+                {
+                    address = address.Remove(0, 1); // delete "/"
+                }
                 address = address.Insert(0, storage.GetAddressUser());
             }
 
@@ -481,10 +488,15 @@ namespace ConsoleSiteParsing
                                     tempSitemapLink = tempSitemapLink.Remove(indexOfXml, tempSitemapLink.Length - indexOfXml);
                                 }
 
-                                if (tempSitemapLink.StartsWith("//") && tempSitemapLink.Contains(storage.GetAddressUser())) 
+                                string addressUserWithoutProtocol = storage.GetAddressUser();
+                                string protocol = storage.GetAddressUser();
+
+                                addressUserWithoutProtocol = addressUserWithoutProtocol.Remove(0, addressUserWithoutProtocol.IndexOf(":") + 1);
+                                protocol = protocol.Remove(protocol.IndexOf(":"), protocol.Length - protocol.IndexOf(":"));
+
+                                if (tempSitemapLink.StartsWith("//") && tempSitemapLink.Contains(addressUserWithoutProtocol)) 
                                 {
-                                    Uri protocol = new Uri(tempSitemapLink);
-                                    tempSitemapLink = tempSitemapLink.Insert(0, protocol.Scheme + ":");
+                                    tempSitemapLink = tempSitemapLink.Insert(0, protocol + ":");
                                 }
 
                                 //ignore links with:
