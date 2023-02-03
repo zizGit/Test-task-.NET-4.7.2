@@ -131,9 +131,9 @@ namespace ConsoleSiteParsing
             do
             {
                 Console.WriteLine("Program has been tested on the next URLs: ");
-                Console.WriteLine("https://ukad-group.com/ (~30 sec)");
+                Console.WriteLine("https://ukad-group.com/ (~ 1 min)");
+                Console.WriteLine("https://faromstudio.com/ (~ 2 min 30 sec)");
                 //Console.WriteLine("https://dou.ua/ (>5 min, test not completed)");
-                //Console.WriteLine("https://metanit.com/ (error 403, access denied)");
                 Console.Write("\nInput URL: ");
                 tempAddress = Console.ReadLine();
 
@@ -158,6 +158,10 @@ namespace ConsoleSiteParsing
         }
         public static void Output(Storage storage)
         {
+            Console.WriteLine("Press any key for continue");
+            Console.ReadKey();
+            Console.Clear();
+
             Console.Write($"User input the next link - {storage.GetAddressUser()}\n");
             Console.Write($"Host link - {storage.GetAddressHost()}\n");
             Console.Write($"Sitemap link - {storage.GetAddressSitemap()}\n");
@@ -257,15 +261,17 @@ namespace ConsoleSiteParsing
                 index++;
             } while (index != storage.GetCountOfAllAddresses());
 
+            //from Microsoft documentation
             parts.Sort();
-
             foreach (Part aPart in parts)
             {
                 Console.WriteLine(aPart);
             }
 
+            //only for debug
             //OutputDebugMode(storage);
 
+            Console.WriteLine("\nPress any key to finish");
             Console.ReadKey();
         }
         private static void OutputDebugMode(Storage storage)
@@ -303,10 +309,6 @@ namespace ConsoleSiteParsing
         public override string ToString()
         {
             return "Ping: " + PartId + " ms " + "    " + PartName;
-        }
-        public int SortByNameAscending(string name1, string name2)
-        {
-            return name1.CompareTo(name2);
         }
         // Default comparer for Part type.
         public int CompareTo(Part comparePart)
@@ -346,8 +348,6 @@ namespace ConsoleSiteParsing
         public static void Parsing(string address, out string toSave)
         {
             WebClient wc = new WebClient();
-            wc.Credentials = CredentialCache.DefaultNetworkCredentials; //new
-
             try 
             {
                 toSave = wc.DownloadString(address);
@@ -416,10 +416,9 @@ namespace ConsoleSiteParsing
         public static void SitemapCheck(Storage storage)
         {
             List<string> xmlLinks = new List<string>();
-            string tempUserAddressToSitemapAddress, sitemap;
-            int index = 0;
+            string tempUserAddressToSitemapAddress, sitemap, tempSitemapLink;
+            int index = 0, startSearchIndex = 0;
             int firstCharIndexOfAddress, lastCharIndexOfAddress;
-            int startSearchIndex = 0;
 
             tempUserAddressToSitemapAddress = storage.GetAddressUser();
             storage.SetAddress(tempUserAddressToSitemapAddress.Insert(tempUserAddressToSitemapAddress.Length, "sitemap.xml"));
@@ -439,7 +438,6 @@ namespace ConsoleSiteParsing
                         }
 
                         //начиная с исходной ссылки и заканчивая знаком <
-
                         do
                         {
                             firstCharIndexOfAddress = sitemap.IndexOf(storage.GetAddressUser(), startSearchIndex);
@@ -450,9 +448,26 @@ namespace ConsoleSiteParsing
 
                                 if (lastCharIndexOfAddress != -1)
                                 {
-                                    storage.SetNewAddressToSitemapList(sitemap.Substring(firstCharIndexOfAddress,
-                                    lastCharIndexOfAddress - firstCharIndexOfAddress));
+                                    tempSitemapLink = sitemap.Substring(firstCharIndexOfAddress, lastCharIndexOfAddress - firstCharIndexOfAddress);
 
+                                    // delete all after .xml
+                                    if (tempSitemapLink.Contains(".xml")) 
+                                    {
+                                        int indexOfXml = tempSitemapLink.IndexOf(".xml") + 4;
+                                        tempSitemapLink = tempSitemapLink.Remove(indexOfXml, tempSitemapLink.Length - indexOfXml);
+                                    }
+                                    
+                                    //ignore links with:
+                                    //hardcode, I know ;-;
+                                    if (!tempSitemapLink.StartsWith("//") && !tempSitemapLink.Contains("/fonts") && !tempSitemapLink.StartsWith("/images") &&
+                                        !tempSitemapLink.Contains("/media/") && !tempSitemapLink.Contains(".png") && !tempSitemapLink.Contains(".pdf") &&
+                                        !tempSitemapLink.Contains(".json") && !tempSitemapLink.Contains(".ico") && !tempSitemapLink.Contains("#") && 
+                                        !tempSitemapLink.Contains(".css") && !tempSitemapLink.Contains("?") && !tempSitemapLink.Contains(".gif") && 
+                                        !tempSitemapLink.Contains(".jpg") && !tempSitemapLink.Contains(".jpeg")) 
+                                    {
+                                        storage.SetNewAddressToSitemapList(tempSitemapLink);
+                                    }
+                                    
                                     startSearchIndex = lastCharIndexOfAddress;
                                 }
                             }
@@ -495,25 +510,21 @@ namespace ConsoleSiteParsing
             Parsing(storage.GetAddressUser(), out siteCode);
             checkedAddressesFromCode.Add(storage.GetAddressUser());
 
+            //https://sites.google.com/site/raznyeurokipoinformatiki/home/rabota-so-ssylkami/polucenie-dannyh-so-starnici-sajta
             if (siteCode != "") 
             {
                 do
                 {
-                    splitCode = siteCode.Split('\n'); //разбираем весь текст на строки
+                    splitCode = siteCode.Split('\n');
 
-                    /*начинаем перебирать строки*/
                     foreach (string str in splitCode)
                     {
-                        /*начинаем двигаться по строке с шагом 1 и с -5 символа с конца*/
                         for (int I = 0; I < str.Length - 5; I++)
                         {
-                            /*читаем сразу 5 символа и смотрим что это*/
                             if (str.Substring(I, 5) == "href=")
                             {
-                                //link found
                                 buf = "";
 
-                                /*заходим внутрь сдвигая индекс на href=" символов*/
                                 if (str.Substring(I, 6) == "href=\"") 
                                 {
                                     I += 6;
@@ -526,17 +537,20 @@ namespace ConsoleSiteParsing
                                 string strTest = str.Remove(0, I);
                                 int indexTest = 0;
 
-                                /*читаем пока не упремся в двойную кавычку или конец строки*/
-                                while (strTest.Length != indexTest && strTest.Substring(indexTest, 1) != " " && strTest.Substring(indexTest, 1) != @"""")
+                                while (strTest.Length != indexTest && strTest.Substring(indexTest, 1) != "]" && 
+                                    strTest.Substring(indexTest, 1) != " " && strTest.Substring(indexTest, 1) != @"""")
                                 {
                                     buf += strTest.Substring(indexTest, 1); // собираем в буфер ссылку
                                     indexTest++; // берем следующий символ
                                 }
 
+                                //ignore links with:
+                                //hardcode, I know ;-;
                                 if (!buf.StartsWith("//") && !buf.Contains("/fonts") && !buf.StartsWith("/images") &&
-                                    !buf.Contains("/media/") && !buf.Contains("png") && !buf.Contains("pdf") && 
-                                    !buf.Contains("json") && !buf.Contains("ico") && !buf.Contains("#") && !buf.Contains("css") && 
-                                    buf.Any())
+                                    !buf.Contains("/media/") && !buf.Contains(".png") && !buf.Contains(".pdf") &&
+                                    !buf.Contains(".json") && !buf.Contains(".ico") && !buf.Contains("#") &&
+                                    !buf.Contains(".css") && !buf.Contains("?") && !buf.Contains(".gif") &&
+                                    !buf.Contains(".jpg") && !buf.Contains(".jpeg") && buf.Any())
                                 {
                                     if (buf.StartsWith("/"))
                                     {
