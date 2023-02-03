@@ -101,19 +101,16 @@ namespace ConsoleSiteParsing
             string tempLink;
             int index = 0;
 
-            if(addressesFromSitemap.Count > 0) 
+            allAddresses.AddRange(addressesFromSitemap);
+            do
             {
-                allAddresses.AddRange(addressesFromSitemap);
-                do
+                tempLink = addressesFromCode.ElementAt(index);
+                if (!allAddresses.Contains(tempLink))
                 {
-                    tempLink = addressesFromCode.ElementAt(index);
-                    if (!allAddresses.Contains(tempLink))
-                    {
-                        allAddresses.Add(tempLink);
-                    }
-                    index++;
-                } while (index != addressesFromCode.Count());
-            }   
+                    allAddresses.Add(tempLink);
+                }
+                index++;
+            } while (index != addressesFromCode.Count());
         }
         public void RemoveLinkFromSitemapList(int index) 
         {
@@ -177,10 +174,10 @@ namespace ConsoleSiteParsing
             string tempLink;
             List<Part> parts = new List<Part>(); //from Microsoft documentation
 
-            Console.WriteLine("Urls FOUNDED IN SITEMAP.XML but not founded after crawling a web site:");
-            //if sitemap list contain link and link-from-code list NOT contain link --> Console.WriteLine(tempLink); = true
             if (storage.GetCountOfAllAddresses() > 0)
             {
+                Console.WriteLine("Urls FOUNDED IN SITEMAP.XML but not founded after crawling a web site:");
+                //if sitemap list contain link and link-from-code list NOT contain link --> Console.WriteLine(tempLink); = true
                 do
                 {
                     tempLink = storage.GetAllAddressesFromList(index);
@@ -196,7 +193,7 @@ namespace ConsoleSiteParsing
                                 {
                                     urlNotFoundAfterCrawling = true;
                                 }
-                                else 
+                                else
                                 {
                                     urlNotFoundAfterCrawling = false;
                                     break;
@@ -213,34 +210,38 @@ namespace ConsoleSiteParsing
 
                     index++;
                 } while (index != storage.GetCountOfAllAddresses());
-            }
 
-            Console.WriteLine("\nUrls FOUNDED BY CRAWLING THE WEBSITE but not in sitemap.xml");
-            //if link-from-code list contain link and sitemap list NOT contain link --> Console.WriteLine(tempLink); = true
-            //use storage.RemoveLinkFromSitemapList(INDEX); for debug and test
-            if (storage.GetCountOfAllAddresses() > 0)
-            {
+                Console.WriteLine("\nUrls FOUNDED BY CRAWLING THE WEBSITE but not in sitemap.xml");
+                //if link-from-code list contain link and sitemap list NOT contain link --> Console.WriteLine(tempLink); = true
+                //use storage.RemoveLinkFromSitemapList(INDEX); for debug and test
                 index = 0;
-                bool urlNotFoundInSitemap = false;
                 do
                 {
+                    bool urlNotFoundInSitemap = false;
                     tempLink = storage.GetAllAddressesFromList(index);
 
                     for (int j = 0; j < storage.GetCountOfCodeAddresses(); j++)
                     {
                         if (storage.GetAddressFromCodeList(j).Equals(tempLink))
                         {
-                            for (int k = 0; k < storage.GetCountOfSitemapAddresses(); k++)
+                            if (storage.GetCountOfSitemapAddresses() != 0)
                             {
-                                if (!storage.GetAddressFromSitemapList(k).Equals(tempLink))
+                                for (int k = 0; k < storage.GetCountOfSitemapAddresses(); k++)
                                 {
-                                    urlNotFoundInSitemap = true;
+                                    if (!storage.GetAddressFromSitemapList(k).Equals(tempLink))
+                                    {
+                                        urlNotFoundInSitemap = true;
+                                    }
+                                    else
+                                    {
+                                        urlNotFoundInSitemap = false;
+                                        break;
+                                    }
                                 }
-                                else
-                                {
-                                    urlNotFoundInSitemap = false;
-                                    break;
-                                }
+                            }
+                            else
+                            {
+                                urlNotFoundInSitemap = true;
                             }
                             break;
                         }
@@ -253,21 +254,21 @@ namespace ConsoleSiteParsing
 
                     index++;
                 } while (index != storage.GetCountOfAllAddresses());
-            }
 
-            Console.WriteLine("\nTiming, please wait");
-            index = 0;
-            do
-            {
-                Program.PingLinks(storage.GetAllAddressesFromList(index), parts);
-                index++;
-            } while (index != storage.GetCountOfAllAddresses());
+                Console.WriteLine("\nTiming, please wait");
+                index = 0;
+                do
+                {
+                    Program.Response(storage.GetAllAddressesFromList(index), parts);
+                    index++;
+                } while (index != storage.GetCountOfAllAddresses());
 
-            //from Microsoft documentation
-            parts.Sort();
-            foreach (Part aPart in parts)
-            {
-                Console.WriteLine(aPart);
+                //from Microsoft documentation
+                parts.Sort();
+                foreach (Part aPart in parts)
+                {
+                    Console.WriteLine(aPart);
+                }
             }
 
             //only for debug
@@ -310,7 +311,7 @@ namespace ConsoleSiteParsing
 
         public override string ToString()
         {
-            return "Ping: " + PartId + " ms " + "    " + PartName;
+            return "Response Time: " + PartId + " ms " + "    " + PartName;
         }
         // Default comparer for Part type.
         public int CompareTo(Part comparePart)
@@ -327,7 +328,6 @@ namespace ConsoleSiteParsing
             if (other == null) return false;
             return (this.PartId.Equals(other.PartId));
         }
-        // Should also override == and != operators.
     }
 
     public class Program
@@ -347,8 +347,21 @@ namespace ConsoleSiteParsing
             InputOutput.Output(storage);
         }
 
-        public static void Parsing(string address, out string toSave)
+        public static void Parsing(Storage storage, string address, out string toSave)
         {
+            //если сайтмап ссылка относительная
+            if (address.Contains(".xml") && !address.StartsWith(storage.GetAddressUser())) 
+            {
+                address = address.Remove(0, 1); // delete "/"
+                address = address.Insert(0, storage.GetAddressUser());
+            }
+
+            //для симулированя отсутствия сайтмапа
+            //if (address.Contains(".xml"))
+            //{
+            //    address = address.Insert(address.Length, "TEST");
+            //}
+
             WebClient wc = new WebClient();
             try 
             {
@@ -376,7 +389,7 @@ namespace ConsoleSiteParsing
                 }
                 else 
                 {
-                    Console.WriteLine("Site or sitemap not responce.\n");
+                    Console.WriteLine($"{hostAddress} not responce.\n");
                 }
             }
             catch (PingException exception)
@@ -388,7 +401,7 @@ namespace ConsoleSiteParsing
             return false;
         }
 
-        public static void PingLinks(string address, List<Part> parts)
+        public static void Response(string address, List<Part> parts)
         {
             var request = WebRequest.Create(address);
             var watch = Stopwatch.StartNew();
@@ -423,81 +436,87 @@ namespace ConsoleSiteParsing
             tempUserAddressToSitemapAddress = storage.GetAddressUser();
             storage.SetAddress(tempUserAddressToSitemapAddress.Insert(tempUserAddressToSitemapAddress.Length, "sitemap.xml"));
 
-            if (Ping(storage.GetAddressHost()))
-            {
-                Parsing(storage.GetAddressSitemap(), out sitemap);
+            Parsing(storage, storage.GetAddressSitemap(), out sitemap);
 
-                if (sitemap != "")
+            if (sitemap != "")
+            {
+                do
                 {
+                    if (xmlLinks.Any())
+                    {
+                        //для дебага на относительные ссылки в сайтмапе
+                        //Uri test = new Uri(xmlLinks.ElementAt(0));
+                        //xmlLinks.Insert(0, test.AbsolutePath);
+
+                        Parsing(storage, xmlLinks.ElementAt(0), out sitemap);
+                        xmlLinks.RemoveAt(0);
+                    }
+
+                    //начиная с исходной ссылки и заканчивая знаком <
                     do
                     {
-                        if (xmlLinks.Any())
-                        {
-                            Parsing(xmlLinks.ElementAt(0), out sitemap);
-                            xmlLinks.RemoveAt(0);
-                        }
+                        firstCharIndexOfAddress = sitemap.IndexOf(storage.GetAddressUser(), startSearchIndex);
 
-                        //начиная с исходной ссылки и заканчивая знаком <
-                        do
+                        if (firstCharIndexOfAddress != -1)
                         {
-                            firstCharIndexOfAddress = sitemap.IndexOf(storage.GetAddressUser(), startSearchIndex);
+                            lastCharIndexOfAddress = sitemap.IndexOf("<", firstCharIndexOfAddress);
 
-                            if (firstCharIndexOfAddress != -1)
+                            if (lastCharIndexOfAddress != -1)
                             {
-                                lastCharIndexOfAddress = sitemap.IndexOf("<", firstCharIndexOfAddress);
+                                tempSitemapLink = sitemap.Substring(firstCharIndexOfAddress, lastCharIndexOfAddress - firstCharIndexOfAddress);
 
-                                if (lastCharIndexOfAddress != -1)
+                                // delete all after .xml
+                                if (tempSitemapLink.Contains(".xml"))
                                 {
-                                    tempSitemapLink = sitemap.Substring(firstCharIndexOfAddress, lastCharIndexOfAddress - firstCharIndexOfAddress);
-
-                                    // delete all after .xml
-                                    if (tempSitemapLink.Contains(".xml")) 
-                                    {
-                                        int indexOfXml = tempSitemapLink.IndexOf(".xml") + 4;
-                                        tempSitemapLink = tempSitemapLink.Remove(indexOfXml, tempSitemapLink.Length - indexOfXml);
-                                    }
-                                    
-                                    //ignore links with:
-                                    //hardcode, I know ;-;
-                                    if (!tempSitemapLink.StartsWith("//") && !tempSitemapLink.Contains("/fonts") && !tempSitemapLink.StartsWith("/images") &&
-                                        !tempSitemapLink.Contains("/media/") && !tempSitemapLink.Contains(".png") && !tempSitemapLink.Contains(".pdf") &&
-                                        !tempSitemapLink.Contains(".json") && !tempSitemapLink.Contains(".ico") && !tempSitemapLink.Contains("#") && 
-                                        !tempSitemapLink.Contains(".css") && !tempSitemapLink.Contains("?") && !tempSitemapLink.Contains(".gif") && 
-                                        !tempSitemapLink.Contains(".jpg") && !tempSitemapLink.Contains(".jpeg")) 
-                                    {
-                                        storage.SetNewAddressToSitemapList(tempSitemapLink);
-                                    }
-                                    
-                                    startSearchIndex = lastCharIndexOfAddress;
+                                    int indexOfXml = tempSitemapLink.IndexOf(".xml") + 4;
+                                    tempSitemapLink = tempSitemapLink.Remove(indexOfXml, tempSitemapLink.Length - indexOfXml);
                                 }
-                            }
-                        } while (firstCharIndexOfAddress != -1);
 
-                        while (index != storage.GetCountOfSitemapAddresses())
-                        {
-                            if (storage.GetAddressFromSitemapList(index).EndsWith(".xml"))
-                            {
-                                xmlLinks.Add(storage.GetAddressFromSitemapList(index));
-                                storage.RemoveLinkFromSitemapList(index);
-                            }
-                            else
-                            {
-                                index++;
+                                //ignore links with:
+                                //hardcode, I know ;-;
+                                if (!tempSitemapLink.StartsWith("//") && !tempSitemapLink.Contains(".png") && !tempSitemapLink.Contains(".pdf") &&
+                                    !tempSitemapLink.Contains(".json") && !tempSitemapLink.Contains(".ico") && !tempSitemapLink.Contains("#") &&
+                                    !tempSitemapLink.Contains(".css") && !tempSitemapLink.Contains("?") && !tempSitemapLink.Contains(".gif") &&
+                                    !tempSitemapLink.Contains(".jpg") && !tempSitemapLink.Contains(".jpeg") && !tempSitemapLink.Contains(".ttf") && 
+                                    !tempSitemapLink.Contains(".woff"))
+                                {
+                                    //если в сайтмапе относительная ссылка
+                                    if (!tempSitemapLink.StartsWith(storage.GetAddressUser())) 
+                                    {
+                                        //и сслыка начинается с /
+                                        if (tempSitemapLink.StartsWith("/")) 
+                                        {
+                                            //убрать первый символ
+                                            tempSitemapLink = tempSitemapLink.Remove(0, 1);
+                                        }
+
+                                        //сделать ссылку абсолютной
+                                        tempSitemapLink = tempSitemapLink.Insert(0, storage.GetAddressUser());
+                                    }
+                                    storage.SetNewAddressToSitemapList(tempSitemapLink);
+                                }
+
+                                startSearchIndex = lastCharIndexOfAddress;
                             }
                         }
-                        startSearchIndex = 0;
+                    } while (firstCharIndexOfAddress != -1);
 
-                    } while (xmlLinks.Any());
-                }
-                else
-                {
-                    Console.WriteLine("Sitemap.xml not found (Parsing)\n");
-                }
+                    while (index != storage.GetCountOfSitemapAddresses())
+                    {
+                        if (storage.GetAddressFromSitemapList(index).EndsWith(".xml"))
+                        {
+                            xmlLinks.Add(storage.GetAddressFromSitemapList(index));
+                            storage.RemoveLinkFromSitemapList(index);
+                        }
+                        else
+                        {
+                            index++;
+                        }
+                    }
+                    startSearchIndex = 0;
+
+                } while (xmlLinks.Any());
             }
-            else
-            {
-                Console.WriteLine("Sitemap.xml not found (Ping)\n");
-            } 
         }
 
         public static void SiteCodeCheck(Storage storage)
@@ -507,7 +526,7 @@ namespace ConsoleSiteParsing
             int index = 0;
             List<string> checkedAddressesFromCode = new List<string>();
 
-            Parsing(storage.GetAddressUser(), out siteCode);
+            Parsing(storage, storage.GetAddressUser(), out siteCode);
             checkedAddressesFromCode.Add(storage.GetAddressUser());
 
             //https://sites.google.com/site/raznyeurokipoinformatiki/home/rabota-so-ssylkami/polucenie-dannyh-so-starnici-sajta
@@ -546,11 +565,9 @@ namespace ConsoleSiteParsing
 
                                 //ignore links with:
                                 //hardcode, I know ;-;
-                                if (!buf.StartsWith("//") && !buf.Contains("/fonts") && !buf.StartsWith("/images") &&
-                                    !buf.Contains("/media/") && !buf.Contains(".png") && !buf.Contains(".pdf") &&
-                                    !buf.Contains(".json") && !buf.Contains(".ico") && !buf.Contains("#") &&
-                                    !buf.Contains(".css") && !buf.Contains("?") && !buf.Contains(".gif") &&
-                                    !buf.Contains(".jpg") && !buf.Contains(".jpeg") && buf.Any())
+                                if (!buf.StartsWith("//") && !buf.Contains(".png") && !buf.Contains(".pdf") && !buf.Contains(".json") && 
+                                    !buf.Contains(".ico") && !buf.Contains("#") && !buf.Contains(".css") && !buf.Contains("?") && !buf.Contains(".gif") &&
+                                    !buf.Contains(".jpg") && !buf.Contains(".jpeg") && !buf.Contains(".ttf") && !buf.Contains(".woff") && buf.Any())
                                 {
                                     if (buf.StartsWith("/"))
                                     {
@@ -572,7 +589,7 @@ namespace ConsoleSiteParsing
 
                     if (!checkedAddressesFromCode.AsReadOnly().ToString().Contains(storage.GetAddressFromCodeList(index)))
                     {
-                        Parsing(storage.GetAddressFromCodeList(index), out siteCode);
+                        Parsing(storage, storage.GetAddressFromCodeList(index), out siteCode);
                         checkedAddressesFromCode.Add(storage.GetAddressFromCodeList(index));
                     }
                     index++;
