@@ -389,7 +389,7 @@ namespace ConsoleSiteParsing
                 }
                 else 
                 {
-                    Console.WriteLine($"{hostAddress} not responce.\n");
+                    Console.WriteLine($"Host {hostAddress} not responce.\n");
                 }
             }
             catch (PingException exception)
