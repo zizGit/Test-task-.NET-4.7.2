@@ -606,6 +606,10 @@ namespace ConsoleSiteParsing
                                     if (buf.Contains(addressUserWithoutProtocol) || buf.Contains(addressUserWithoutProtocolAndBackslash))
                                     {
                                         buf = buf.Insert(0, protocol + ":");
+                                        if (!buf.EndsWith("/")) 
+                                        {
+                                            buf = buf.Insert(buf.Length, "/");
+                                        }
                                     }   
                                 }
 
