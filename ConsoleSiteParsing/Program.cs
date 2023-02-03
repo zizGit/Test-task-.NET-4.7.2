@@ -590,11 +590,23 @@ namespace ConsoleSiteParsing
                                     indexTest++; // берем следующий символ
                                 }
 
+                                //buf = buf.Remove(0, 6);
+
                                 //если ссылка относительная и не ведет на внешний ресурс
-                                if (buf.StartsWith("//") && buf.Contains(storage.GetAddressUser()))
+                                string addressUserWithoutProtocol = storage.GetAddressUser();
+                                string protocol = storage.GetAddressUser();
+                                string addressUserWithoutProtocolAndBackslash;
+
+                                addressUserWithoutProtocol = addressUserWithoutProtocol.Remove(0, addressUserWithoutProtocol.IndexOf(":") + 1);
+                                protocol = protocol.Remove(protocol.IndexOf(":"), protocol.Length - protocol.IndexOf(":"));
+                                addressUserWithoutProtocolAndBackslash = addressUserWithoutProtocol.Remove(addressUserWithoutProtocol.Length - 1, 1);
+
+                                if (buf.StartsWith("//"))
                                 {
-                                    Uri protocol = new Uri(buf);
-                                    buf = buf.Insert(0, protocol.Scheme + ":");
+                                    if (buf.Contains(addressUserWithoutProtocol) || buf.Contains(addressUserWithoutProtocolAndBackslash))
+                                    {
+                                        buf = buf.Insert(0, protocol + ":");
+                                    }   
                                 }
 
                                 //ignore links with:
