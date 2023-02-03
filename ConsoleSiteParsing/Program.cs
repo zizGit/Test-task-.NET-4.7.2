@@ -131,9 +131,11 @@ namespace ConsoleSiteParsing
             do
             {
                 Console.WriteLine("Program has been tested on the next URLs: ");
-                Console.WriteLine("https://ukad-group.com/ (~ 1 min)");
+                Console.WriteLine("https://ukad-group.com/ (~ 40 sec)");
                 Console.WriteLine("https://faromstudio.com/ (~ 2 min 30 sec)");
-                //Console.WriteLine("https://dou.ua/ (>5 min, test not completed)");
+                Console.WriteLine("https://www.playwing.com/ (~ 30 sec)");
+                //Console.WriteLine("https://mirowin.com/ (~ 10 min)"); //https://example.com/*link*/]]> --> ]]> it is bug 
+                //Console.WriteLine("https://dou.ua/ (> 5 min, test not completed)");
                 Console.Write("\nInput URL: ");
                 tempAddress = Console.ReadLine();
 
@@ -399,15 +401,13 @@ namespace ConsoleSiteParsing
                     {
                         watch.Stop();
                         parts.Add(new Part() { PartName = address, PartId = watch.ElapsedMilliseconds / 10 });
-                        //Console.WriteLine($"{address} - Success - {watch.ElapsedMilliseconds / 10} ms");
                     }
                 }
             }
-            catch (WebException exception)
+            catch /*(WebException exception)*/
             {
                 watch.Stop();
                 parts.Add(new Part() { PartName = address, PartId = watch.ElapsedMilliseconds / 10 });
-                //Console.WriteLine($"{address} - {exception.Message} - {watch.ElapsedMilliseconds / 10} ms");
             }
         }
 
@@ -487,7 +487,7 @@ namespace ConsoleSiteParsing
                         }
                         startSearchIndex = 0;
 
-                    } while (index == 0);
+                    } while (xmlLinks.Any());
                 }
                 else
                 {
