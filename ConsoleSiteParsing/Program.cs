@@ -50,7 +50,6 @@ namespace ConsoleSiteParsing
         {
             addressesFromSitemap.Add(newAddress);
         }
-        // setters //
 
         // getters //
         public string GetAddressUser() 
@@ -65,7 +64,6 @@ namespace ConsoleSiteParsing
         {
             return sitemapAddress;
         }
-
         public string GetAddressFromCodeList(int index)
         {
             return addressesFromCode.ElementAt(index);
@@ -90,7 +88,6 @@ namespace ConsoleSiteParsing
         {
             return allAddresses.Count();
         }
-        // getters //
 
         // func //
         public void SortLinksInAllList() 
@@ -106,17 +103,14 @@ namespace ConsoleSiteParsing
 
             if(addressesFromSitemap.Count > 0) 
             {
-                allAddresses = addressesFromSitemap;
-
+                allAddresses.AddRange(addressesFromSitemap);
                 do
                 {
                     tempLink = addressesFromCode.ElementAt(index);
-
                     if (!allAddresses.Contains(tempLink))
                     {
                         allAddresses.Add(tempLink);
                     }
-
                     index++;
                 } while (index != addressesFromCode.Count());
             }   
@@ -125,7 +119,6 @@ namespace ConsoleSiteParsing
         {
             addressesFromSitemap.RemoveAt(index);
         }
-        // func //
     }
 
     public class InputOutput 
@@ -133,7 +126,7 @@ namespace ConsoleSiteParsing
         public static void Input(Storage storage)
         {
             string tempAddress; //user input address
-            bool inputCheck = false;
+            bool inputCheck = false; //host online or offline
 
             do
             {
@@ -158,7 +151,6 @@ namespace ConsoleSiteParsing
                     Console.Clear();
                     Console.WriteLine("Input error! Please try again.\n");
                 }
-
             } while (!inputCheck);
 
             Console.Clear();
@@ -166,10 +158,6 @@ namespace ConsoleSiteParsing
         }
         public static void Output(Storage storage)
         {
-            int index = 0;
-            string tempLink;
-            List<Part> parts = new List<Part>();
-
             Console.Write($"User input the next link - {storage.GetAddressUser()}\n");
             Console.Write($"Host link - {storage.GetAddressHost()}\n");
             Console.Write($"Sitemap link - {storage.GetAddressSitemap()}\n");
@@ -179,7 +167,12 @@ namespace ConsoleSiteParsing
             Console.Write($"Count of all founded links - {storage.GetCountOfAllAddresses()}\n");
             Console.WriteLine();
 
+            int index = 0;
+            string tempLink;
+            List<Part> parts = new List<Part>(); //from Microsoft documentation
+
             Console.WriteLine("Urls FOUNDED IN SITEMAP.XML but not founded after crawling a web site:");
+            //if sitemap list contain link and link-from-code list also contain link --> Console.WriteLine(tempLink); = false
             if (storage.GetCountOfAllAddresses() > 0)
             {
                 do
@@ -213,23 +206,29 @@ namespace ConsoleSiteParsing
             }
 
             Console.WriteLine("\nUrls FOUNDED BY CRAWLING THE WEBSITE but not in sitemap.xml");
+            //if link-from-code list contain link and sitemap list NOT contain link --> Console.WriteLine(tempLink); = true
+            //use storage.RemoveLinkFromSitemapList(INDEX); for debug and test
             if (storage.GetCountOfAllAddresses() > 0)
             {
                 index = 0;
+                bool urlNotFoundInSitemap = false;
                 do
                 {
-                    int urlNotFoundInSitemap = 0;
                     tempLink = storage.GetAllAddressesFromList(index);
 
                     for (int j = 0; j < storage.GetCountOfCodeAddresses(); j++)
                     {
-                        if (storage.GetAddressFromCodeList(j).Contains(tempLink))
+                        if (storage.GetAddressFromCodeList(j).Equals(tempLink))
                         {
                             for (int k = 0; k < storage.GetCountOfSitemapAddresses(); k++)
                             {
-                                if (!storage.GetAddressFromSitemapList(k).Contains(tempLink))
+                                if (!storage.GetAddressFromSitemapList(k).Equals(tempLink))
                                 {
-                                    urlNotFoundInSitemap++;
+                                    urlNotFoundInSitemap = true;
+                                }
+                                else
+                                {
+                                    urlNotFoundInSitemap = false;
                                     break;
                                 }
                             }
@@ -237,7 +236,7 @@ namespace ConsoleSiteParsing
                         }
                     }
 
-                    if (urlNotFoundInSitemap + 1 == storage.GetCountOfSitemapAddresses())
+                    if (urlNotFoundInSitemap)
                     {
                         Console.WriteLine(tempLink);
                     }
@@ -268,7 +267,6 @@ namespace ConsoleSiteParsing
         private static void OutputDebugMode(Storage storage)
         {
             int counter = 0;
-
             Console.WriteLine("\nAll links from sitemap.xml: ");
             if (storage.GetCountOfSitemapAddresses() > 0)
             {
@@ -280,7 +278,7 @@ namespace ConsoleSiteParsing
             }
 
             counter = 0;
-            Console.WriteLine("\nAll links from site: ");
+            Console.WriteLine("\nAll links from site (code): ");
             if (storage.GetCountOfCodeAddresses() > 0)
             {
                 do
