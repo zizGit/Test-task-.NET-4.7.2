@@ -102,7 +102,7 @@ namespace ConsoleSiteParsing
             int index = 0;
 
             allAddresses.AddRange(addressesFromSitemap);
-            do
+            while (index != addressesFromCode.Count()) 
             {
                 tempLink = addressesFromCode.ElementAt(index);
                 if (!allAddresses.Contains(tempLink))
@@ -110,11 +110,19 @@ namespace ConsoleSiteParsing
                     allAddresses.Add(tempLink);
                 }
                 index++;
-            } while (index != addressesFromCode.Count());
+            }
         }
         public void RemoveLinkFromSitemapList(int index) 
         {
             addressesFromSitemap.RemoveAt(index);
+        }
+        public bool AnyLinksInCodeList()
+        {
+            if (addressesFromCode.Any()) 
+            {
+                return true;
+            }
+            return false;
         }
     }
 
@@ -166,10 +174,7 @@ namespace ConsoleSiteParsing
         }
         public static void Output(Storage storage)
         {
-            Console.WriteLine("Press any key for continue");
-            Console.ReadKey();
             Console.Clear();
-
             Console.Write($"User input the next link - {storage.GetAddressUser()}\n");
             Console.Write($"Host link - {storage.GetAddressHost()}\n");
             Console.Write($"Sitemap link - {storage.GetAddressSitemap()}\n");
@@ -196,17 +201,24 @@ namespace ConsoleSiteParsing
                     {
                         if (storage.GetAddressFromSitemapList(j).Contains(tempLink))
                         {
-                            for (int k = 0; k < storage.GetCountOfCodeAddresses(); k++)
+                            if (storage.GetCountOfCodeAddresses() != 0) 
                             {
-                                if (!storage.GetAddressFromCodeList(k).Contains(tempLink))
+                                for (int k = 0; k < storage.GetCountOfCodeAddresses(); k++)
                                 {
-                                    urlNotFoundAfterCrawling = true;
+                                    if (!storage.GetAddressFromCodeList(k).Contains(tempLink))
+                                    {
+                                        urlNotFoundAfterCrawling = true;
+                                    }
+                                    else
+                                    {
+                                        urlNotFoundAfterCrawling = false;
+                                        break;
+                                    }
                                 }
-                                else
-                                {
-                                    urlNotFoundAfterCrawling = false;
-                                    break;
-                                }
+                            }
+                            else
+                            {
+                                urlNotFoundAfterCrawling = true;
                             }
                             break;
                         }
@@ -278,6 +290,10 @@ namespace ConsoleSiteParsing
                 {
                     Console.WriteLine(aPart);
                 }
+            }
+            else 
+            {
+                Console.WriteLine("Links not found");
             }
 
             //only for debug
@@ -383,10 +399,8 @@ namespace ConsoleSiteParsing
             {
                 toSave = wc.DownloadString(address);
             }
-            catch (WebException exception)
+            catch
             {
-                Console.WriteLine($" Exception: {address}");
-                Console.WriteLine($" {exception.Message}\n");
                 toSave = "";
             }
         }
@@ -405,7 +419,7 @@ namespace ConsoleSiteParsing
                 }
                 else 
                 {
-                    Console.WriteLine($"Host {hostAddress} not responce.\n");
+                    Console.WriteLine($"Host {hostAddress} not responce. Status: {reply.Status}\n");
                 }
             }
             catch (PingException exception)
@@ -419,25 +433,48 @@ namespace ConsoleSiteParsing
 
         public static void Response(string address, List<Part> parts)
         {
-            var request = WebRequest.Create(address);
-            var watch = Stopwatch.StartNew();
-            
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(address);
+            Stopwatch timer = Stopwatch.StartNew();
+
             try
             {
-                using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+                response.Close();
+            }
+            catch (WebException ex)
+            {
+                address = address.Insert(0, $"{ex.Message} - ");
+            }
+
+            timer.Stop();
+
+            TimeSpan timeTaken = timer.Elapsed;
+
+            parts.Add(new Part() { PartName = address, PartId = (long)timeTaken.TotalMilliseconds / 10 });
+
+            /*
+            {
+                var request = WebRequest.Create(address);
+                var watch = Stopwatch.StartNew();
+
+                try
                 {
-                    using (Stream answer = response.GetResponseStream())
+                    using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
                     {
-                        watch.Stop();
-                        parts.Add(new Part() { PartName = address, PartId = watch.ElapsedMilliseconds / 10 });
+                        using (Stream answer = response.GetResponseStream())
+                        {
+                            watch.Stop();
+                            parts.Add(new Part() { PartName = address, PartId = watch.ElapsedMilliseconds / 10 });
+                        }
                     }
                 }
+                catch
+                {
+                    watch.Stop();
+                    parts.Add(new Part() { PartName = address, PartId = watch.ElapsedMilliseconds / 10 });
+                }
             }
-            catch /*(WebException exception)*/
-            {
-                watch.Stop();
-                parts.Add(new Part() { PartName = address, PartId = watch.ElapsedMilliseconds / 10 });
-            }
+            */
         }
 
         // https://ukad-group.com/ --> https://ukad-group.com/sitemap.xml
@@ -635,6 +672,11 @@ namespace ConsoleSiteParsing
                                 }
                             }
                         }
+                    }
+
+                    if (!storage.AnyLinksInCodeList()) 
+                    {
+                        break;
                     }
 
                     if (!checkedAddressesFromCode.AsReadOnly().ToString().Contains(storage.GetAddressFromCodeList(index)))
