@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace ConsoleSiteParsing
 {
@@ -130,7 +131,8 @@ namespace ConsoleSiteParsing
     {
         public static void Input(Storage storage)
         {
-            string tempAddress; //user input address
+            //async void
+            string tempAddress, inputStrCheck; //user input address
             bool inputCheck = false; //host online or offline
 
             do
@@ -150,10 +152,25 @@ namespace ConsoleSiteParsing
                     {
                         storage.SetAddress(tempAddress);
 
+                        
                         var hostAddress = new Uri(tempAddress);
                         storage.SetAddress(hostAddress.Host);
 
+                        //await Program.Ping
                         inputCheck = Program.Ping(storage.GetAddressHost());
+                        
+                        if (!inputCheck) 
+                        {
+                            Console.WriteLine("Do you want to continue? [Y or something else]");
+                            inputStrCheck = Console.ReadLine();
+
+                            if (inputStrCheck == "Y") 
+                            {
+                                break;
+                            }
+
+                            Console.Clear();
+                        }
                     }
                     else
                     {
@@ -166,7 +183,6 @@ namespace ConsoleSiteParsing
                     Console.Clear();
                     Console.WriteLine("Link should not contain \" \" (space)!\n");
                 }
-                
             } while (!inputCheck);
 
             Console.Clear();
@@ -296,35 +312,8 @@ namespace ConsoleSiteParsing
                 Console.WriteLine("Links not found");
             }
 
-            //only for debug
-            //OutputDebugMode(storage);
-
             Console.WriteLine("\nPress any key to finish");
             Console.ReadKey();
-        }
-        private static void OutputDebugMode(Storage storage)
-        {
-            int counter = 0;
-            Console.WriteLine("\nAll links from sitemap.xml: ");
-            if (storage.GetCountOfSitemapAddresses() > 0)
-            {
-                do
-                {
-                    Console.WriteLine($"{counter + 1}. {storage.GetAddressFromSitemapList(counter)}");
-                    counter++;
-                } while (storage.GetCountOfSitemapAddresses() != counter);
-            }
-
-            counter = 0;
-            Console.WriteLine("\nAll links from site (code): ");
-            if (storage.GetCountOfCodeAddresses() > 0)
-            {
-                do
-                {
-                    Console.WriteLine($"{counter + 1}. {storage.GetAddressFromCodeList(counter)}");
-                    counter++;
-                } while (storage.GetCountOfCodeAddresses() != counter);
-            }
         }
     }
 
@@ -372,7 +361,7 @@ namespace ConsoleSiteParsing
             InputOutput.Output(storage);
         }
 
-        public static void Parsing(Storage storage, string address, out string toSave)
+        private static void Parsing(Storage storage, string address, out string toSave)
         {
             //если сайтмап ссылка относительная
             if (address.Contains(".xml") && !address.StartsWith(storage.GetAddressUser())) 
@@ -405,21 +394,38 @@ namespace ConsoleSiteParsing
             }
         }
 
+        //ignore links with:
+        private static bool Filter(string link) 
+        {
+            if (!link.StartsWith("//") && !link.Contains("#") && !link.Contains("?") && !link.Contains(".json") && !link.Contains(".ico") && 
+                !link.Contains(".png") && !link.Contains(".css") && !link.Contains(".pdf") && !link.Contains(".gif") && !link.Contains(".jpg") && 
+                !link.Contains(".jpeg") && !link.Contains(".ttf") && !link.Contains(".woff") && !link.Contains(".js"))
+            {
+                return true;
+            }
+            return false;
+        }
+
         public static bool Ping(string hostAddress)
         {
+            //async Task<bool>
             Ping pingSend = new Ping();
+
+            //IPHostEntry hostInfo = Dns.GetHostByName(hostAddress);
+            //var host = hostInfo.AddressList.FirstOrDefault().ToString();
 
             try
             {
                 PingReply reply = pingSend.Send(hostAddress);
-                
-                if (reply.Status.ToString() == "Success")
+                //var reply = await pingSend.SendPingAsync(host, 15000);
+
+                if (reply.Status == IPStatus.Success)
                 {
                     return true;
                 }
                 else 
                 {
-                    Console.WriteLine($"Host {hostAddress} not responce. Status: {reply.Status}\n");
+                    Console.WriteLine($"Host {hostAddress} not response. Status: {reply.Status}\n");
                 }
             }
             catch (PingException exception)
@@ -483,7 +489,8 @@ namespace ConsoleSiteParsing
         {
             List<string> xmlLinks = new List<string>();
             string tempUserAddressToSitemapAddress, sitemap, tempSitemapLink;
-            int index = 0, startSearchIndex = 0;
+            string[] splitCode;
+            int index = 0;
             int firstCharIndexOfAddress, lastCharIndexOfAddress;
 
             tempUserAddressToSitemapAddress = storage.GetAddressUser();
@@ -495,28 +502,30 @@ namespace ConsoleSiteParsing
             {
                 do
                 {
+                    //для дебага на относительные ссылки в сайтмапе
+                    //Uri test = new Uri(storage.GetAddressSitemap());
+                    //xmlLinks.Insert(0, test.AbsolutePath);
+
                     if (xmlLinks.Any())
                     {
-                        //для дебага на относительные ссылки в сайтмапе
-                        //Uri test = new Uri(xmlLinks.ElementAt(0));
-                        //xmlLinks.Insert(0, test.AbsolutePath);
-
                         Parsing(storage, xmlLinks.ElementAt(0), out sitemap);
                         xmlLinks.RemoveAt(0);
                     }
 
+                    splitCode = sitemap.Split('\n');
+
                     //начиная с исходной ссылки и заканчивая знаком <
-                    do
+                    foreach (string sitemapStr in splitCode)
                     {
-                        firstCharIndexOfAddress = sitemap.IndexOf(storage.GetAddressUser(), startSearchIndex);
+                        firstCharIndexOfAddress = sitemapStr.IndexOf(storage.GetAddressUser(), 0);
 
                         if (firstCharIndexOfAddress != -1)
                         {
-                            lastCharIndexOfAddress = sitemap.IndexOf("<", firstCharIndexOfAddress);
+                            lastCharIndexOfAddress = sitemapStr.IndexOf("<", firstCharIndexOfAddress);
 
                             if (lastCharIndexOfAddress != -1)
                             {
-                                tempSitemapLink = sitemap.Substring(firstCharIndexOfAddress, lastCharIndexOfAddress - firstCharIndexOfAddress);
+                                tempSitemapLink = sitemapStr.Substring(firstCharIndexOfAddress, lastCharIndexOfAddress - firstCharIndexOfAddress);
 
                                 // delete all after .xml
                                 if (tempSitemapLink.Contains(".xml"))
@@ -525,30 +534,35 @@ namespace ConsoleSiteParsing
                                     tempSitemapLink = tempSitemapLink.Remove(indexOfXml, tempSitemapLink.Length - indexOfXml);
                                 }
 
+                                //если ссылка относительная и не ведет на внешний ресурс
                                 string addressUserWithoutProtocol = storage.GetAddressUser();
                                 string protocol = storage.GetAddressUser();
+                                string addressUserWithoutProtocolAndBackslash;
 
                                 addressUserWithoutProtocol = addressUserWithoutProtocol.Remove(0, addressUserWithoutProtocol.IndexOf(":") + 1);
                                 protocol = protocol.Remove(protocol.IndexOf(":"), protocol.Length - protocol.IndexOf(":"));
+                                addressUserWithoutProtocolAndBackslash = addressUserWithoutProtocol.Remove(addressUserWithoutProtocol.Length - 1, 1);
 
-                                if (tempSitemapLink.StartsWith("//") && tempSitemapLink.Contains(addressUserWithoutProtocol)) 
+                                //дополнительная проверка
+                                if (tempSitemapLink.StartsWith("//"))
                                 {
-                                    tempSitemapLink = tempSitemapLink.Insert(0, protocol + ":");
+                                    if (tempSitemapLink.Contains(addressUserWithoutProtocol) || tempSitemapLink.Contains(addressUserWithoutProtocolAndBackslash))
+                                    {
+                                        tempSitemapLink = tempSitemapLink.Insert(0, protocol + ":");
+                                        if (!tempSitemapLink.EndsWith("/"))
+                                        {
+                                            tempSitemapLink = tempSitemapLink.Insert(tempSitemapLink.Length, "/");
+                                        }
+                                    }
                                 }
 
-                                //ignore links with:
-                                //hardcode, I know ;-;
-                                if (!tempSitemapLink.StartsWith("//") && !tempSitemapLink.Contains(".png") && !tempSitemapLink.Contains(".pdf") &&
-                                    !tempSitemapLink.Contains(".json") && !tempSitemapLink.Contains(".ico") && !tempSitemapLink.Contains("#") &&
-                                    !tempSitemapLink.Contains(".css") && !tempSitemapLink.Contains("?") && !tempSitemapLink.Contains(".gif") &&
-                                    !tempSitemapLink.Contains(".jpg") && !tempSitemapLink.Contains(".jpeg") && !tempSitemapLink.Contains(".ttf") && 
-                                    !tempSitemapLink.Contains(".woff"))
+                                if (Filter(tempSitemapLink))
                                 {
                                     //если в сайтмапе относительная ссылка
-                                    if (!tempSitemapLink.StartsWith(storage.GetAddressUser())) 
+                                    if (!tempSitemapLink.StartsWith(storage.GetAddressUser()))
                                     {
                                         //и сслыка начинается с /
-                                        if (tempSitemapLink.StartsWith("/")) 
+                                        if (tempSitemapLink.StartsWith("/"))
                                         {
                                             //убрать первый символ
                                             tempSitemapLink = tempSitemapLink.Remove(0, 1);
@@ -559,11 +573,9 @@ namespace ConsoleSiteParsing
                                     }
                                     storage.SetNewAddressToSitemapList(tempSitemapLink);
                                 }
-
-                                startSearchIndex = lastCharIndexOfAddress;
                             }
                         }
-                    } while (firstCharIndexOfAddress != -1);
+                    }
 
                     while (index != storage.GetCountOfSitemapAddresses())
                     {
@@ -577,8 +589,6 @@ namespace ConsoleSiteParsing
                             index++;
                         }
                     }
-                    startSearchIndex = 0;
-
                 } while (xmlLinks.Any());
             }
         }
@@ -650,11 +660,7 @@ namespace ConsoleSiteParsing
                                     }   
                                 }
 
-                                //ignore links with:
-                                //hardcode, I know ;-;
-                                if (!buf.StartsWith("//") && !buf.Contains(".png") && !buf.Contains(".pdf") && !buf.Contains(".json") && 
-                                    !buf.Contains(".ico") && !buf.Contains("#") && !buf.Contains(".css") && !buf.Contains("?") && !buf.Contains(".gif") &&
-                                    !buf.Contains(".jpg") && !buf.Contains(".jpeg") && !buf.Contains(".ttf") && !buf.Contains(".woff") && buf.Any())
+                                if (Filter(buf) && buf.Any())
                                 {
                                     if (buf.StartsWith("/"))
                                     {
