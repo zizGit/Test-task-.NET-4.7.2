@@ -379,9 +379,9 @@ namespace ConsoleSiteParsing
         //ignore links with:
         private static bool Filter(string link) 
         {
-            if (!link.StartsWith("//") && !link.Contains("#") && !link.Contains("?") && !link.Contains(".json") && !link.Contains(".ico") && 
-                !link.Contains(".png") && !link.Contains(".css") && !link.Contains(".pdf") && !link.Contains(".gif") && !link.Contains(".jpg") && 
-                !link.Contains(".jpeg") && !link.Contains(".ttf") && !link.Contains(".woff") && !link.Contains(".js"))
+            if (!link.StartsWith("//") && !link.Contains("#") && !link.Contains("?") && !link.Contains("+") && !link.Contains(".json") && 
+                !link.Contains(".ico") && !link.Contains(".png") && !link.Contains(".css") && !link.Contains(".pdf") && !link.Contains(".gif") && 
+                !link.Contains(".jpg") && !link.Contains(".jpeg") && !link.Contains(".ttf") && !link.Contains(".woff") && !link.Contains(".js"))
             {
                 return true;
             }
@@ -462,15 +462,15 @@ namespace ConsoleSiteParsing
                     //начиная с исходной ссылки и заканчивая знаком <
                     foreach (string sitemapStr in splitCode)
                     {
-                        firstCharIndexOfAddress = sitemapStr.IndexOf(storage.GetAddressUser(), 0);
+                        firstCharIndexOfAddress = sitemapStr.IndexOf("<loc>", 0);
 
                         if (firstCharIndexOfAddress != -1)
                         {
-                            lastCharIndexOfAddress = sitemapStr.IndexOf("<", firstCharIndexOfAddress);
+                            lastCharIndexOfAddress = sitemapStr.IndexOf("</loc>", firstCharIndexOfAddress);
 
                             if (lastCharIndexOfAddress != -1)
                             {
-                                tempSitemapLink = sitemapStr.Substring(firstCharIndexOfAddress, lastCharIndexOfAddress - firstCharIndexOfAddress);
+                                tempSitemapLink = sitemapStr.Substring(firstCharIndexOfAddress + 5, lastCharIndexOfAddress - firstCharIndexOfAddress - 5);
 
                                 // delete all after .xml
                                 if (tempSitemapLink.Contains(".xml"))
@@ -605,7 +605,7 @@ namespace ConsoleSiteParsing
                                     }   
                                 }
 
-                                if (Filter(buf) && buf.Any())
+                                if (Filter(buf) && buf.Any() && !buf.Contains(".xml"))
                                 {
                                     if (buf.StartsWith("/"))
                                     {
