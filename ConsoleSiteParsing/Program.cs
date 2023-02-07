@@ -4,8 +4,6 @@ using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Diagnostics;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace ConsoleSiteParsing
 {
@@ -131,46 +129,30 @@ namespace ConsoleSiteParsing
     {
         public static void Input(Storage storage)
         {
-            //async void
-            string tempAddress, inputStrCheck; //user input address
-            bool inputCheck = false; //host online or offline
+            string tempAddress; //user input address
 
-            do
+            while (true) 
             {
                 Console.WriteLine("Program has been tested on the next URLs: ");
                 Console.WriteLine("https://ukad-group.com/ (~ 40 sec)");
                 Console.WriteLine("https://faromstudio.com/ (~ 2 min 30 sec)");
                 Console.WriteLine("https://www.playwing.com/ (~ 30 sec)");
                 //Console.WriteLine("https://mirowin.com/ (~ 10 min)"); //https://example.com/*link*/]]> --> ]]> it is bug 
-                //Console.WriteLine("https://dou.ua/ (> 5 min, test not completed)");
                 Console.Write("\nInput URL: ");
                 tempAddress = Console.ReadLine();
 
-                if(!tempAddress.Contains(" ")) 
+                if (!tempAddress.Contains(" "))
                 {
                     if (tempAddress.StartsWith("http://") || tempAddress.StartsWith("https://"))
                     {
                         storage.SetAddress(tempAddress);
 
-                        
                         var hostAddress = new Uri(tempAddress);
                         storage.SetAddress(hostAddress.Host);
 
-                        //await Program.Ping
-                        inputCheck = Program.Ping(storage.GetAddressHost());
-                        
-                        if (!inputCheck) 
-                        {
-                            Console.WriteLine("Do you want to continue? [Y or something else]");
-                            inputStrCheck = Console.ReadLine();
+                        Program.Ping(storage.GetAddressHost());
 
-                            if (inputStrCheck == "Y") 
-                            {
-                                break;
-                            }
-
-                            Console.Clear();
-                        }
+                        break;
                     }
                     else
                     {
@@ -178,14 +160,14 @@ namespace ConsoleSiteParsing
                         Console.WriteLine("Link should start with \"http://\" or \"https://\"\n");
                     }
                 }
-                else 
+                else
                 {
                     Console.Clear();
                     Console.WriteLine("Link should not contain \" \" (space)!\n");
                 }
-            } while (!inputCheck);
+            }
 
-            Console.Clear();
+            //Console.Clear();
             Console.WriteLine("\nProgram crawls the site, please wait\n");
         }
         public static void Output(Storage storage)
@@ -406,35 +388,24 @@ namespace ConsoleSiteParsing
             return false;
         }
 
-        public static bool Ping(string hostAddress)
+        public static void Ping(string hostAddress)
         {
-            //async Task<bool>
             Ping pingSend = new Ping();
-
-            //IPHostEntry hostInfo = Dns.GetHostByName(hostAddress);
-            //var host = hostInfo.AddressList.FirstOrDefault().ToString();
 
             try
             {
                 PingReply reply = pingSend.Send(hostAddress);
-                //var reply = await pingSend.SendPingAsync(host, 15000);
 
-                if (reply.Status == IPStatus.Success)
+                if (reply.Status != IPStatus.Success)
                 {
-                    return true;
-                }
-                else 
-                {
-                    Console.WriteLine($"Host {hostAddress} not response. Status: {reply.Status}\n");
+                    Console.WriteLine($"Host {hostAddress} not response. Status: {reply.Status}");
                 }
             }
             catch (PingException exception)
             {
                 Console.WriteLine($"    Exception: {hostAddress}");
-                Console.WriteLine($"    {exception.InnerException.Message}\n");
+                Console.WriteLine($"    {exception.InnerException.Message}");
             }
-
-            return false;
         }
 
         public static void Response(string address, List<Part> parts)
@@ -455,30 +426,6 @@ namespace ConsoleSiteParsing
             timer.Stop();
 
             parts.Add(new Part() { PartName = address, PartId = timer.ElapsedMilliseconds});
-
-            /*
-            {
-                var request = WebRequest.Create(address);
-                var watch = Stopwatch.StartNew();
-
-                try
-                {
-                    using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
-                    {
-                        using (Stream answer = response.GetResponseStream())
-                        {
-                            watch.Stop();
-                            parts.Add(new Part() { PartName = address, PartId = watch.ElapsedMilliseconds / 10 });
-                        }
-                    }
-                }
-                catch
-                {
-                    watch.Stop();
-                    parts.Add(new Part() { PartName = address, PartId = watch.ElapsedMilliseconds / 10 });
-                }
-            }
-            */
         }
 
         // https://ukad-group.com/ --> https://ukad-group.com/sitemap.xml
