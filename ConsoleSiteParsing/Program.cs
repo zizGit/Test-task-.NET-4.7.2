@@ -440,10 +440,7 @@ namespace ConsoleSiteParsing
         public static void Response(string address, List<Part> parts)
         {
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(address);
-            //Stopwatch timer = Stopwatch.StartNew();
-            Stopwatch timer = new Stopwatch();
-
-            timer.Start();
+            Stopwatch timer = Stopwatch.StartNew();
 
             try
             {
@@ -456,12 +453,8 @@ namespace ConsoleSiteParsing
             }
 
             timer.Stop();
-            
-            TimeSpan timeTaken = timer.Elapsed;
 
-            timer.Reset();
-
-            parts.Add(new Part() { PartName = address, PartId = (long)timeTaken.TotalMilliseconds / 10 });
+            parts.Add(new Part() { PartName = address, PartId = timer.ElapsedMilliseconds});
 
             /*
             {
