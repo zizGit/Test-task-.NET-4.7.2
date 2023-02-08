@@ -551,7 +551,7 @@ namespace ConsoleSiteParsing
             //https://sites.google.com/site/raznyeurokipoinformatiki/home/rabota-so-ssylkami/polucenie-dannyh-so-starnici-sajta
             if (siteCode != "") 
             {
-                do
+                while (storage.GetCountOfCodeAddresses() != checkedAddressesFromCode.Count())
                 {
                     splitCode = siteCode.Split('\n');
 
@@ -630,13 +630,14 @@ namespace ConsoleSiteParsing
                         break;
                     }
 
-                    if (!checkedAddressesFromCode.AsReadOnly().ToString().Contains(storage.GetAddressFromCodeList(index)))
+                    if (!checkedAddressesFromCode.AsReadOnly().ToString().Contains(storage.GetAddressFromCodeList(index)) 
+                        && storage.GetAddressFromCodeList(index) != storage.GetAddressUser())
                     {
                         Parsing(storage, storage.GetAddressFromCodeList(index), out siteCode);
                         checkedAddressesFromCode.Add(storage.GetAddressFromCodeList(index));
                     }
                     index++;
-                } while (storage.GetCountOfCodeAddresses() != checkedAddressesFromCode.Count());
+                }
             }
         }
     }
